@@ -1,1 +1,1 @@
-hello frend
+hello friend
