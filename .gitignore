@@ -1,6 +1,2 @@
 # Ignore virtual environments
 .venv/
-
-# Ignore data
-data/
-
