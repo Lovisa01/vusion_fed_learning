@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  cowrie-honeypot:
+    build: .
+    container_name: cowrie-container
+    image: cowrie
+    ports:
+      - "2222:2222"
+      - "2223:2223"
+    restart: unless-stopped # Restart the container automatically on failure
