@@ -1401,7 +1401,7 @@ find $(cat /dev/urandom | tr -dc 'a-zA-Z' | fold -w 8 | head -n 1) -type f -exec
 awk 'BEGIN { for (i=0;i<2;i++) print int(rand() * 200) }' | xargs -I{} cp {}.txt ~/Documents/
 find / -type f -iname "*.txt" | xargs tar -czvf random_text_files.tar.gz
 find . -name '*.txt' | xargs tail -n 3 | awk '{print $0 " - " $1}'
-echo $(cjjat /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&*()_+=-' | fold -w 16 | head -n 1)
+echo $(cat /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&*()_+=-' | fold -w 16 | head -n 1)
 env | xargs tar czf $(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c10).tar.gz
 find -name "*.html" | xargs -I {} sed -i 's/\s//g' {}
 `mkdir -p "$(sort -R /dev/urandom | tr -dc A-Za-z0-9 | head -c10)"`
