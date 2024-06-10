@@ -20,6 +20,14 @@ class LLMEndpointBase(ABC):
         """
 
 
+class EchoEndpoint(LLMEndpointBase):
+    """
+    Endpoint that can be used for testing. It echos the message back to the sender
+    """
+    def ask(self, prompt_dict: dict[str, str]) -> str:
+        return prompt_dict["message"]
+
+
 class ChatGPTEndpoint(LLMEndpointBase):
     pass
 

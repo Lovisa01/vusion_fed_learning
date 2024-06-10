@@ -1,7 +1,9 @@
 import os
 import json
+import subprocess
 from pathlib import Path
 from abc import ABC, abstractmethod
+
 
 from LLMEndpoint import LLMEndpointBase
 
@@ -51,8 +53,8 @@ class TeamLeaderRole(AgentRoleBase):
     A role that acts as a team leader
     """
 
-    def __init__(self) -> None:
-        super().__init__("TeamLeader")
+    def __init__(self, llm_endpoint: LLMEndpointBase) -> None:
+        super().__init__(role="TeamLeader", llm_endpoint=llm_endpoint)
 
 
 class AnalystRole(AgentRoleBase):
@@ -60,8 +62,8 @@ class AnalystRole(AgentRoleBase):
     A role that acts as an analyst for attacker behavior
     """
 
-    def __init__(self) -> None:
-        super().__init__("Analyst")
+    def __init__(self, llm_endpoint: LLMEndpointBase) -> None:
+        super().__init__(role="Analyst", llm_endpoint=llm_endpoint)
 
     @abstractmethod
     def analyse_logs(self, container_id: str) -> str:
@@ -101,7 +103,29 @@ class CowrieAnalystRole(AnalystRole):
         return self.llm.ask(prompt_dict)
 
     def read_logs(self, container_id: str) -> str:
-        return "pwd"
+        # Cowrie log location
+        cowrie_log = f"/cowrie/cowrie-git/var/log/cowrie/cowrie.log"
+        tmp_log = f"/tmp/{container_id}-cowrie.log"
+
+        # Copy file from container to local filesystem
+        docker_cp = ["docker", "cp", f"{container_id}:{cowrie_log}", tmp_log]
+        res = subprocess.run(docker_cp)
+
+        # Raise error if command failed
+        res.check_returncode()
+
+        # Read file contents
+        with open(tmp_log, "r") as f:
+            logs = json.load(f)
+        
+        # Remove tmp file
+        os.remove(tmp_log)
+
+        # Return logs
+        return logs
+
+    def chat(self, conversation_history: list[dict]) -> str:
+        raise NotImplementedError
 
 
 class HoneypotDesignerRole(AgentRoleBase):
@@ -134,3 +158,4 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         # Populate the fake filesystem with LLM and place data under honeyfs
         # Pickle fake filesystem into fs.pickle
         # Return unique id
+        pass
