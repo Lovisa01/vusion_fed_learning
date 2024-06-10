@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "BlueLLMTeam"
+version = "0.0.1"
+authors = [
+  { name="Simon Paulsson", email="simon@paulsson.one" },
+]
+license = "MIT"
+description = "Blue team of LLM agents that can use honeypots to defend resources against a red team"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    # Add dependencies here
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Lovisa01/vusion_fed_learning"
+"Bug Tracker" = "https://github.com/Lovisa01/vusion_fed_learning/issues"
