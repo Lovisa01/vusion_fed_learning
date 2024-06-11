@@ -51,7 +51,7 @@ class ChatGPTEndpoint(LLMEndpointBase):
 
             # Make a request to the OpenAI API
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",  # Specify the model you want to use
+                model=prompt_dict.get("model", "gpt-3.5-turbo"),  # Specify the model you want to use
                 messages=inputmessages,
                 max_tokens=150
             )
