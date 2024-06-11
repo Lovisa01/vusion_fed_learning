@@ -33,6 +33,7 @@ class LLMEndpointBase(ABC):
                 context: The previous context
                 message: The message to the LLM agent
                 model: The designated model to be used.
+                response_format: here you can specify 'json_format' to get a response where it only returns a json for better parsing of information.
         
         Returns:
             response: response from LLM agent
@@ -51,7 +52,7 @@ class ChatGPTEndpoint(LLMEndpointBase):
 
             # Make a request to the OpenAI API
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",  # Specify the model you want to use
+                model=prompt_dict['model'],  # Specify the model you want to use
                 messages=inputmessages,
                 max_tokens=150
             )
