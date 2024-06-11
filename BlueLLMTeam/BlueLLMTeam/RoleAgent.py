@@ -129,8 +129,9 @@ class CowrieDesignerRole(HoneypotDesignerRole):
     
     def create_honeypot(self, honeypot_description: str) -> str:
         # Create unique id
-        # Create new folder for the data (named after the unique id)
+        # Create new folder for the data (new fake-file system) (named after the unique id) /tmp/honey_id
         # Create honeyfs subfolder
         # Populate the fake filesystem with LLM and place data under honeyfs
         # Pickle fake filesystem into fs.pickle
         # Return unique id
+        pass
