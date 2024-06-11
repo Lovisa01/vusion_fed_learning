@@ -3,3 +3,6 @@
 
 # Ignore python compile files
 __pycache__/
+
+# Ignore secrets
+.env

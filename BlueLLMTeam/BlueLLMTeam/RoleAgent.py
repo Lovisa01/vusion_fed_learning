@@ -104,8 +104,8 @@ class CowrieAnalystRole(AnalystRole):
 
     def read_logs(self, container_id: str) -> str:
         # Cowrie log location
-        cowrie_log = f"/cowrie/cowrie-git/var/log/cowrie/cowrie.log"
-        tmp_log = f"/tmp/{container_id}-cowrie.log"
+        cowrie_log = f"/cowrie/cowrie-git/var/log/cowrie/cowrie.json"
+        tmp_log = f"/tmp/{container_id}-cowrie.json"
 
         # Copy file from container to local filesystem
         docker_cp = ["docker", "cp", f"{container_id}:{cowrie_log}", tmp_log]
@@ -114,15 +114,20 @@ class CowrieAnalystRole(AnalystRole):
         # Raise error if command failed
         res.check_returncode()
 
-        # Read file contents
+        # Read file contents into the logs array
+        logs = []
         with open(tmp_log, "r") as f:
-            logs = json.load(f)
+            # One json record for each line
+            for record in f:
+                log = json.loads(record)
+                if log.get("eventid") == "cowrie.command.input":
+                    logs.append(json.dumps(log))
         
         # Remove tmp file
         os.remove(tmp_log)
 
         # Return logs
-        return logs
+        return "\n".join(logs)
 
     def chat(self, conversation_history: list[dict]) -> str:
         raise NotImplementedError
@@ -159,3 +164,12 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         # Pickle fake filesystem into fs.pickle
         # Return unique id
         pass
+
+
+if __name__ == "__main__":
+    from LLMEndpoint import Llama2Endpoint
+    import sys
+    llm = Llama2Endpoint()
+    analyst = CowrieAnalystRole(llm)
+    response = analyst.analyse_logs(sys.argv[1])
+    print(response)
