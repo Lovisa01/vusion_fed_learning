@@ -1,4 +1,4 @@
 # Ignore virtual environments
 .venv/
 .env
-/FrankTesting
+FrankTesting
