@@ -18,6 +18,6 @@ if __name__ == "__main__":
     response = endpoint.ask(prompt_dict)
     
     if response:
-        print("ChatGPT Response:", response)
+        print("ChatGPT Response:", response.content)
     else:
         print("Failed to get response from ChatGPT.")
