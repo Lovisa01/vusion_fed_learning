@@ -33,7 +33,6 @@ class LLMEndpointBase(ABC):
                 context: The previous context
                 message: The message to the LLM agent
                 model: The designated model to be used.
-                response_format: to get a json response use json_format
         
         Returns:
             response: response from LLM agent
