@@ -1,14 +1,12 @@
 #DECLARE ALL IMPORTS HERE.
 #BEFORE RUNNING CHECK REQUIREMENTES ARE INSTALLED THANKS!
 from abc import ABC, abstractmethod
-import pandas as pd
-import openai
-import torch
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
 from abc import ABC, abstractmethod
 from typing import Dict
+import ollama
 
 # YOU WILL HAVE TO LOAD FROM YOUR ENVINVORNMENT FILE
 # Load environment variables from the .env file
@@ -69,6 +67,27 @@ class ChatGPTEndpoint(LLMEndpointBase):
             return None
 
 
-
 class Llama2Endpoint(LLMEndpointBase):
-    pass
+
+    def __init__(self, host: str = None) -> None:
+        super().__init__()
+        self.host = host
+        self.client = ollama.Client(self.host)
+    
+    def ask(self, prompt_dict: Dict[str, str]) -> str:
+        try:
+            # Create a prompt from the prompt_dict
+            inputmessages = [
+                {"role": "system", "content": prompt_dict['systemRole']},
+                {"role": "user", "content": f"{prompt_dict['user']} {prompt_dict['context']} {prompt_dict['message']}"}
+            ]
+
+            # Make a request to the OpenAI API
+            response = self.client.chat(
+                model=prompt_dict.get("model", "llama2-uncensored"),  # Specify the model you want to use
+                messages=inputmessages
+            )
+            return response["message"]["content"]
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return None
