@@ -2,3 +2,5 @@
 .venv/
 .env
 FrankTesting/
+__pycache__/
+tmpfs/
