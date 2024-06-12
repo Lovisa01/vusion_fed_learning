@@ -2,4 +2,4 @@
 .venv/
 .env
 FrankTesting/
-/BlueLLMTeam/BlueLLMTeam/__pycache__
+__pycache__/
