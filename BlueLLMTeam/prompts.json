@@ -4,5 +4,9 @@
     },
     "Analyst": {
         "System": "You are a behvior analyst for hackers"
+    },
+    "Designer": {
+        "System": "You are the Designer of a blue team in cybersecyrity"
     }
+    
 }
