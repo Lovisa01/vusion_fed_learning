@@ -4,6 +4,8 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 
 from LLMEndpoint import LLMEndpointBase
+from Honeypot.createFiles import generate_files, generate_random_id
+from Honeypot.createfs import pickledir
 
 
 DEFAULT_PROMPT_CONFIGURATION_FILE = Path(__file__).parent.parent / "prompts.json"
@@ -105,6 +107,9 @@ class CowrieAnalystRole(AnalystRole):
 
 
 class HoneypotDesignerRole(AgentRoleBase):
+
+    def __init__(self, llm_endpoint: LLMEndpointBase) -> None:
+        super().__init__("Designer", llm_endpoint)
     
     @abstractmethod
     def create_honeypot(self, honeypot_description: str) -> str:
@@ -128,10 +133,31 @@ class HoneypotDesignerRole(AgentRoleBase):
 class CowrieDesignerRole(HoneypotDesignerRole):
     
     def create_honeypot(self, honeypot_description: str) -> str:
-        # Create unique id
-        # Create new folder for the data (new fake-file system) (named after the unique id) /tmp/honey_id
-        # Create honeyfs subfolder
-        # Populate the fake filesystem with LLM and place data under honeyfs
-        # Pickle fake filesystem into fs.pickle
-        # Return unique id
-        pass
+        base_directory = "Honeypot/tmpfs/" + generate_random_id(8)
+
+        #TODO: Move this prompt to Simon's prompt file
+        # Prompt for the root directory of the file system
+        root_dir_prompt = {
+                "systemRole": "You're a linux terminal that needs to provide a file system for a car manufacturing company.",
+                "user": "Linux developer",
+                "context": "Filenames and file contents should be based on a car manufacturing company. The files should be files that you would find in an administrative file system of a car manufacturing company",
+                "message": "Give an exmaple of the base directory of a linux file system, without explanatory text, folder names only, one folder per line, without any special characters or numbers, just the names of the folders",
+                "model" : "gpt-3.5-turbo"
+            }
+
+        root_dir_response = self.llm.ask(root_dir_prompt)
+        root_folders = root_dir_response.content.split("\n")
+
+        generate_files(root_folders, base_directory + "/honeyfs", 0, 2, 2, 3, root_dir_prompt, self.llm)
+
+        print("Created honeypot filesystem at", base_directory)
+
+        pickledir(base_directory+"/honeyfs", 2, base_directory+"/fs.pickle")
+
+        return base_directory
+        
+    def deploy_honeypot(self, honeypot_id: str):
+        raise NotImplementedError("Not yet implemented")
+
+    def chat(self, conversation_history: list[dict]) -> str:
+        raise NotImplementedError("Not yet implemented")
