@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 
 from BlueLLMTeam.RoleAgent import TeamLeaderRole, CowrieAnalystRole, CowrieDesignerRole
-from BlueLLMTeam.LLMEndpoint import EchoEndpoint
+from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
 
 
 @dataclass
@@ -58,27 +58,31 @@ def main():
         print(context)
     
     # Create agents
-    llm_endpoint = EchoEndpoint()
+    llm_endpoint = ChatGPTEndpoint()
     designer = CowrieDesignerRole(llm_endpoint)
     analyst = CowrieAnalystRole(llm_endpoint)
 
     # Design and deploy honeypot
     honeypot_id = designer.create_honeypot(json.dumps(context, indent=4))
     cowrie_container_id = designer.deploy_honeypot(honeypot_id)
-
+    print("Waiting for container startup (20 seconds, temporarily hardcoded)")
+    time.sleep(20)
+    
     # Monitor attacker
     try:
         while True:
             start_time = time.time_ns()
 
-            analyst.analyse_logs(cowrie_container_id)
+            print(analyst.analyse_logs(cowrie_container_id).content)
 
             # Sleep until next loop
             exec_time = (time.time_ns() - start_time) / 1e9
             sleep_time = 1 / args.frequency - exec_time
-            if args.verbosity > 3:
-                print(f"Sleeping for {sleep_time} seconds")
-            time.sleep(sleep_time)
+            
+            if sleep_time > 0:
+                if args.verbosity > 3:
+                    print(f"Sleeping for {sleep_time} seconds")
+                time.sleep(sleep_time)
     except KeyboardInterrupt:
         pass
 

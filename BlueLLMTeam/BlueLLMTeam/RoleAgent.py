@@ -102,7 +102,7 @@ class CowrieAnalystRole(AnalystRole):
         logs = self.read_logs(container)
         prompt_dict = {
             "systemRole": self.prompts.get("System"),
-            "user": self.role,
+            "user": "What is the hacker trying to do given these logs? Please provide your reasoning and end with a short conclusion.\n\n Here are the logs we have currently captured: \n\n",
             "context": "",
             "message": logs,
         }
@@ -189,12 +189,12 @@ class CowrieDesignerRole(HoneypotDesignerRole):
 
         try:
         # Check if the source folder exists
-            if not os.path.exists(ROOT_DIR/Honeypot/"_honeyfs"):
+            if not os.path.exists(ROOT_DIR / "Honeypot/_honeyfs"):
                 print(f"Source folder does not exist.")
                 return
 
-            shutil.copytree(ROOT_DIR/Honeypot/"_honeyfs/etc", HONEYPOT_FS / honeypotfs_id / "honeyfs/etc")
-            shutil.copytree(ROOT_DIR/Honeypot/"_honeyfs/proc", HONEYPOT_FS / honeypotfs_id / "honeyfs/proc")
+            shutil.copytree(ROOT_DIR / "Honeypot/_honeyfs/etc", HONEYPOT_FS / honeypotfs_id / "honeyfs/etc")
+            shutil.copytree(ROOT_DIR / "Honeypot/_honeyfs/proc", HONEYPOT_FS / honeypotfs_id / "honeyfs/proc")
             print(f"Folder successfully copied.")
         
         except Exception as e:
@@ -204,7 +204,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         
     def deploy_honeypot(self, honeypot_id: str):
         client = docker.from_env()
-        image_name = "cowrie/cowrie"
+        image_name = "cowrie/cowrie:latest"
         try:
             print("Pulling Cowrie image...")
             image = client.images.pull(image_name)
