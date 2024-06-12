@@ -1,5 +1,7 @@
 import os
 import json
+import shutil
+import docker
 from pathlib import Path
 from abc import ABC, abstractmethod
 
@@ -7,10 +9,10 @@ from LLMEndpoint import LLMEndpointBase
 from Honeypot.createFiles import generate_files, generate_random_id
 from Honeypot.createfs import pickledir
 
-
-DEFAULT_PROMPT_CONFIGURATION_FILE = Path(__file__).parent.parent / "prompts.json"
+ROOT_DIR = Path(__file__).parent
+DEFAULT_PROMPT_CONFIGURATION_FILE = ROOT_DIR.parent / "prompts.json"
 PROMPT_CONFIGURATION_FILE = os.environ.get("PROMPT_CONFIGURATION", DEFAULT_PROMPT_CONFIGURATION_FILE)
-
+HONEYPOT_FS = ROOT_DIR / "Honeypot/tmpfs"
 
 class AgentRoleBase(ABC):
     """
@@ -133,7 +135,7 @@ class HoneypotDesignerRole(AgentRoleBase):
 class CowrieDesignerRole(HoneypotDesignerRole):
     
     def create_honeypot(self, honeypot_description: str) -> str:
-        base_directory = "Honeypot/tmpfs/" + generate_random_id(8)
+        honeypotfs_id = generate_random_id(8)
 
         #TODO: Move this prompt to Simon's prompt file
         # Prompt for the root directory of the file system
@@ -148,16 +150,55 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         root_dir_response = self.llm.ask(root_dir_prompt)
         root_folders = root_dir_response.content.split("\n")
 
-        generate_files(root_folders, base_directory + "/honeyfs", 0, 2, 2, 3, root_dir_prompt, self.llm)
+        generate_files(root_folders, HONEYPOT_FS / honeypotfs_id / "honeyfs", 0, 2, 2, 3, root_dir_prompt, self.llm)
 
-        print("Created honeypot filesystem at", base_directory)
+        print("Created honeypot filesystem at", HONEYPOT_FS / honeypotfs_id)
 
-        pickledir(base_directory+"/honeyfs", 2, base_directory+"/fs.pickle")
+        pickledir(HONEYPOT_FS / honeypotfs_id / "honeyfs", 3, HONEYPOT_FS / honeypotfs_id / "custom.pickle")
 
-        return base_directory
+        try:
+        # Check if the source folder exists
+            if not os.path.exists(HONEYPOT_FS/"_honeyfs"):
+                print(f"Source folder does not exist.")
+                return
+
+            shutil.copytree(HONEYPOT_FS/"_honeyfs/etc", HONEYPOT_FS / honeypotfs_id / "honeyfs/etc")
+            shutil.copytree(HONEYPOT_FS/"_honeyfs/proc", HONEYPOT_FS / honeypotfs_id / "honeyfs/proc")
+            print(f"Folder successfully copied.")
+        
+        except Exception as e:
+            print(f"An error occurred when copying honeyfs: {str(e)}")
+
+        return honeypotfs_id
         
     def deploy_honeypot(self, honeypot_id: str):
-        raise NotImplementedError("Not yet implemented")
+        client = docker.from_env()
+        image_name = "cowrie/cowrie"
+        try:
+            print("Pulling Cowrie image...")
+            image = client.images.pull(image_name)
+            print("Successfully pulled Cowrie image.")
+
+            print("Creating Cowrie container...")
+
+            container = client.containers.run(
+                image=image_name,
+                detach=True,
+                ports={"2222/tcp": 2222},
+                volumes={
+                    HONEYPOT_FS / honeypot_id / "custom.pickle": {"bind": "/cowrie/cowrie-git/share/cowrie/fs.pickle", "mode": "rw"},
+                    HONEYPOT_FS / honeypot_id / "honeyfs": {"bind": "/cowrie/cowrie-git/honeyfs/", "mode": "rw"}
+                    },
+            )
+            print("Successfully created Cowrie container ID: ", container.id)
+            return container.id
+
+        except docker.errors.APIError as e:
+            print(f"Failed to create Cowrie container. Error: {e}")
+        except docker.errors.ImageNotFound as e:
+            print(f"Failed to pull Cowrie image. Error: {e}")
+        except Exception as e:
+            print(f"An error occurred when deploying Cowrie container. Error: {e}")
 
     def chat(self, conversation_history: list[dict]) -> str:
         raise NotImplementedError("Not yet implemented")
