@@ -7,3 +7,5 @@ __pycache__/
 # Ignore secrets
 .env
 FrankTesting/
+__pycache__/
+tmpfs/
