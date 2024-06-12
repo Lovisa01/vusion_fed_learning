@@ -19,10 +19,12 @@ class AgentRoleBase(ABC):
     Defines common behavior for them
     """
 
-    def __init__(self, role: str, llm_endpoint: LLMEndpointBase) -> None:
+    def __init__(self, role: str, llm_endpoint: LLMEndpointBase, prompts: dict[str, str] = None) -> None:
         super().__init__()
         self.role = role
-        self.prompts = self.load_prompts()
+
+        # Load prompts from default configuration if no prompts are given
+        self.prompts = prompts or self.load_prompts()
 
         self.llm = llm_endpoint
 
@@ -134,6 +136,9 @@ class CowrieAnalystRole(AnalystRole):
 
 
 class HoneypotDesignerRole(AgentRoleBase):
+
+    def __init__(self, llm_endpoint: LLMEndpointBase) -> None:
+        super().__init__(role="Honeypot Designer", llm_endpoint=llm_endpoint)
     
     @abstractmethod
     def create_honeypot(self, honeypot_description: str) -> str:
@@ -164,6 +169,12 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         # Pickle fake filesystem into fs.pickle
         # Return unique id
         pass
+
+    def deploy_honeypot(self, honeypot_id: str):
+        return super().deploy_honeypot(honeypot_id)
+    
+    def chat(self, conversation_history: list[dict]) -> str:
+        return super().chat(conversation_history)
 
 
 if __name__ == "__main__":
