@@ -67,17 +67,22 @@ def main():
     cowrie_container_id = designer.deploy_honeypot(honeypot_id)
 
     # Monitor attacker
-    while True:
-        start_time = time.time_ns()
+    try:
+        while True:
+            start_time = time.time_ns()
 
-        analyst.analyse_logs(cowrie_container_id)
+            analyst.analyse_logs(cowrie_container_id)
 
-        # Sleep until next loop
-        exec_time = (time.time_ns() - start_time) / 1e9
-        sleep_time = 1 / args.frequency - exec_time
-        if args.verbosity > 3:
-            print(f"Sleeping for {sleep_time} seconds")
-        time.sleep(sleep_time)
+            # Sleep until next loop
+            exec_time = (time.time_ns() - start_time) / 1e9
+            sleep_time = 1 / args.frequency - exec_time
+            if args.verbosity > 3:
+                print(f"Sleeping for {sleep_time} seconds")
+            time.sleep(sleep_time)
+    except KeyboardInterrupt:
+        pass
+
+    print("Stopping execution")
 
 
 if __name__ == "__main__":
