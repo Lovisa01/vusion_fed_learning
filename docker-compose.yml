@@ -8,4 +8,6 @@ services:
     ports:
       - "2222:2222"
       - "2223:2223"
+    volumes:
+      - ./cowrie-logs:/home/cowrie/cowrie/var/log/cowrie
     restart: unless-stopped # Restart the container automatically on failure

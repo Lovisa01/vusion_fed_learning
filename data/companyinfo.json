@@ -1,0 +1,9 @@
+{
+    "Org_Name": "Volvo",
+    "Industry": "Automotive",
+    "Products": true,
+    "Services": true,
+    "Employee_Size": 100000,
+    "Customer_Size": 5000000,
+    "Regions": ["Europe", "North America", "Asia", "South America", "Africa", "Australia"]
+  }
