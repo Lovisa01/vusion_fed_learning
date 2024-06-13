@@ -158,12 +158,12 @@ class CowrieDesignerRole(HoneypotDesignerRole):
 
         try:
         # Check if the source folder exists
-            if not os.path.exists(ROOT_DIR/Honeypot/"_honeyfs"):
+            if not os.path.exists(ROOT_DIR/"Honeypot/_honeyfs"):
                 print(f"Source folder does not exist.")
                 return
 
-            shutil.copytree(ROOT_DIR/Honeypot/"_honeyfs/etc", HONEYPOT_FS / honeypotfs_id / "honeyfs/etc")
-            shutil.copytree(ROOT_DIR/Honeypot/"_honeyfs/proc", HONEYPOT_FS / honeypotfs_id / "honeyfs/proc")
+            shutil.copytree(ROOT_DIR/"Honeypot/_honeyfs/etc", HONEYPOT_FS / honeypotfs_id / "honeyfs/etc")
+            shutil.copytree(ROOT_DIR/"Honeypot/_honeyfs/proc", HONEYPOT_FS / honeypotfs_id / "honeyfs/proc")
             print(f"Folder successfully copied.")
         
         except Exception as e:
