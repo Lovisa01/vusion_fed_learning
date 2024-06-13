@@ -4,3 +4,6 @@ torch
 transformers
 openai
 python-dotenv
+watchdog
+requests
+pypdf2
