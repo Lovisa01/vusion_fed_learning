@@ -83,23 +83,12 @@ class AnalystRole(AgentRoleBase):
             response: Analyse of the logs
         """
 
-    @abstractmethod
-    def read_logs(self, container_id: str) -> str:
-        """
-        Read logs from a honeypot
-
-        Arguments:
-            container_id: id for the docker container to read the logs from
-        """
-
-
 class CowrieAnalystRole(AnalystRole):
     """
     An export on Cowrie analysis
     """
 
-    def analyse_logs(self, container: str) -> str:
-        logs = self.read_logs(container)
+    def analyse_logs(self, logs: str) -> str:
         prompt_dict = {
             "systemRole": self.prompts.get("System"),
             "user": "What is the hacker trying to do given these logs? Please provide your reasoning and end with a short conclusion.\n\n Here are the logs we have currently captured: \n\n",
@@ -107,33 +96,6 @@ class CowrieAnalystRole(AnalystRole):
             "message": logs,
         }
         return self.llm.ask(prompt_dict)
-
-    def read_logs(self, container_id: str) -> str:
-        # Cowrie log location
-        cowrie_log = f"/cowrie/cowrie-git/var/log/cowrie/cowrie.json"
-        tmp_log = f"/tmp/{container_id}-cowrie.json"
-
-        # Copy file from container to local filesystem
-        docker_cp = ["docker", "cp", f"{container_id}:{cowrie_log}", tmp_log]
-        res = subprocess.run(docker_cp)
-
-        # Raise error if command failed
-        res.check_returncode()
-
-        # Read file contents into the logs array
-        logs = []
-        with open(tmp_log, "r") as f:
-            # One json record for each line
-            for record in f:
-                log = json.loads(record)
-                if log.get("eventid") == "cowrie.command.input":
-                    logs.append(json.dumps(log))
-        
-        # Remove tmp file
-        os.remove(tmp_log)
-
-        # Return logs
-        return "\n".join(logs)
 
     def chat(self, conversation_history: list[dict]) -> str:
         raise NotImplementedError
@@ -157,7 +119,7 @@ class HoneypotDesignerRole(AgentRoleBase):
         """
 
     @abstractmethod
-    def deploy_honeypot(self, honeypot_id: str):
+    def deploy_honeypot(self):
         """
         Deploy a already created honeypot
         """
@@ -165,9 +127,20 @@ class HoneypotDesignerRole(AgentRoleBase):
 
 class CowrieDesignerRole(HoneypotDesignerRole):
     
-    def create_honeypot(self, honeypot_description: str) -> str:
-        honeypotfs_id = generate_random_id(8)
+    def __init__(self, llm_endpoint: LLMEndpointBase) -> None:
+        super().__init__(llm_endpoint)
+        self.cowrie_container = None
+        self.honeypotfs_id = generate_random_id(8)
 
+        # File locations
+        self.fake_fs_data = HONEYPOT_FS / self.honeypotfs_id
+        self.fake_fs = self.fake_fs_data / "honeyfs"
+
+        # Container logs
+        self.logs = []
+        self.logs_updated = False
+
+    def create_honeypot(self, honeypot_description: str) -> str:
         #TODO: Move this prompt to Simon's prompt file
         # Prompt for the root directory of the file system
         root_dir_prompt = {
@@ -181,11 +154,11 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         root_dir_response = self.llm.ask(root_dir_prompt)
         root_folders = root_dir_response.content.split("\n")
 
-        generate_files(root_folders, HONEYPOT_FS / honeypotfs_id / "honeyfs", 0, 2, 2, 3, root_dir_prompt, self.llm)
+        generate_files(root_folders, self.fake_fs_data, 0, 2, 2, 3, root_dir_prompt, self.llm)
 
-        print("Created honeypot filesystem at", HONEYPOT_FS / honeypotfs_id)
-
-        pickledir(HONEYPOT_FS / honeypotfs_id / "honeyfs", 3, HONEYPOT_FS / honeypotfs_id / "custom.pickle")
+        print("Created honeypot filesystem at", self.fake_fs)
+ 
+        pickledir(self.fake_fs, 3, self.fake_fs_data / "custom.pickle")
 
         try:
         # Check if the source folder exists
@@ -193,16 +166,18 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                 print(f"Source folder does not exist.")
                 return
 
-            shutil.copytree(ROOT_DIR / "Honeypot/_honeyfs/etc", HONEYPOT_FS / honeypotfs_id / "honeyfs/etc")
-            shutil.copytree(ROOT_DIR / "Honeypot/_honeyfs/proc", HONEYPOT_FS / honeypotfs_id / "honeyfs/proc")
+            shutil.copytree(ROOT_DIR / "Honeypot/_honeyfs/etc", self.fake_fs / "etc")
+            shutil.copytree(ROOT_DIR / "Honeypot/_honeyfs/proc", self.fake_fs / "proc")
             print(f"Folder successfully copied.")
         
         except Exception as e:
             print(f"An error occurred when copying honeyfs: {str(e)}")
 
-        return honeypotfs_id
-        
-    def deploy_honeypot(self, honeypot_id: str):
+    def deploy_honeypot(self):
+        # Check if the honeypot is already deployed
+        if self.cowrie_container is not None:
+            raise ValueError("Cowrie container already deployed")
+
         client = docker.from_env()
         image_name = "cowrie/cowrie:latest"
         try:
@@ -212,17 +187,16 @@ class CowrieDesignerRole(HoneypotDesignerRole):
 
             print("Creating Cowrie container...")
 
-            container = client.containers.run(
+            self.cowrie_container = client.containers.run(
                 image=image_name,
                 detach=True,
                 ports={"2222/tcp": 2222},
                 volumes={
-                    HONEYPOT_FS / honeypot_id / "custom.pickle": {"bind": "/cowrie/cowrie-git/share/cowrie/fs.pickle", "mode": "rw"},
-                    HONEYPOT_FS / honeypot_id / "honeyfs": {"bind": "/cowrie/cowrie-git/honeyfs/", "mode": "rw"}
+                    self.fake_fs_data / "custom.pickle": {"bind": "/cowrie/cowrie-git/share/cowrie/fs.pickle", "mode": "rw"},
+                    self.fake_fs: {"bind": "/cowrie/cowrie-git/honeyfs/", "mode": "rw"}
                     },
             )
-            print("Successfully created Cowrie container ID: ", container.id)
-            return container.id
+            print("Successfully created Cowrie container ID: ", self.cowrie_container.id)
 
         except docker.errors.APIError as e:
             print(f"Failed to create Cowrie container. Error: {e}")
@@ -230,6 +204,52 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             print(f"Failed to pull Cowrie image. Error: {e}")
         except Exception as e:
             print(f"An error occurred when deploying Cowrie container. Error: {e}")
+
+    def get_logs(self) -> str:
+        """
+        Get all logs if they have been updated since the last time this function was called
+        """
+        self.update_logs()
+        if self.logs_updated == True:
+            self.logs_updated = False
+            return "\n".join(self.logs)
+        return ""
+
+    def update_logs(self) -> str:
+        # Check that the container is deployed
+        if self.cowrie_container is None:
+            raise ValueError("Cowrie container has not been deployed")
+
+        # Cowrie log location
+        cowrie_log = f"/cowrie/cowrie-git/var/log/cowrie/cowrie.json"
+        tmp_log = f"/tmp/{self.cowrie_container.id}-cowrie.json"
+
+        # Copy file from container to local filesystem
+        docker_cp = ["docker", "cp", f"{self.cowrie_container.id}:{cowrie_log}", tmp_log]
+        res = subprocess.run(docker_cp, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+
+        # Raise error if command failed
+        res.check_returncode()
+
+        # Read file contents into the logs array
+        logs = []
+        with open(tmp_log, "r") as f:
+            # One json record for each line
+            for record in f:
+                log = json.loads(record)
+                if log.get("eventid") == "cowrie.command.input":
+                    log_s = json.dumps(log)
+                    if log_s not in self.logs:
+                        self.logs.append(log_s)
+                        self.logs_updated = True
+        
+        # Remove tmp file
+        os.remove(tmp_log)
+
+    def stop(self):
+        self.cowrie_container.stop()
+        self.cowrie_container.remove()
+        shutil.rmtree(self.fake_fs_data)
 
     def chat(self, conversation_history: list[dict]) -> str:
         raise NotImplementedError("Not yet implemented")

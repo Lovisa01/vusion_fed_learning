@@ -63,8 +63,8 @@ def main():
     analyst = CowrieAnalystRole(llm_endpoint)
 
     # Design and deploy honeypot
-    honeypot_id = designer.create_honeypot(json.dumps(context, indent=4))
-    cowrie_container_id = designer.deploy_honeypot(honeypot_id)
+    designer.create_honeypot(json.dumps(context, indent=4))
+    designer.deploy_honeypot()
     print("Waiting for container startup (20 seconds, temporarily hardcoded)")
     time.sleep(20)
     
@@ -72,8 +72,13 @@ def main():
     try:
         while True:
             start_time = time.time_ns()
-
-            print(analyst.analyse_logs(cowrie_container_id).content)
+            
+            logs = designer.get_logs()
+            if logs:
+                if args.verbose:
+                    print(f"\nNew interaction since last time. Analyzing the following logs: \n{logs}\n")
+                response = analyst.analyse_logs(logs).content
+                print(response)
 
             # Sleep until next loop
             exec_time = (time.time_ns() - start_time) / 1e9
@@ -84,7 +89,8 @@ def main():
                     print(f"Sleeping for {sleep_time} seconds")
                 time.sleep(sleep_time)
     except KeyboardInterrupt:
-        pass
+        print("Removing containers and temp files")
+        designer.stop()
 
     print("Stopping execution")
 
