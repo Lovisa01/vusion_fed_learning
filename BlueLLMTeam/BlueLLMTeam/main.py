@@ -80,7 +80,7 @@ def main():
 
     # Design and deploy honeypot
     print(LLM_DESIGNER)
-    print("Createing custiom file system for honeypot...")
+    print("Createing custom file system for honeypot...")
     designer.create_honeypot(json.dumps(context, indent=4))
     print("Deploying honeypot...")
     designer.deploy_honeypot()
