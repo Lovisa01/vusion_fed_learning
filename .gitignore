@@ -1,5 +1,10 @@
 # Ignore virtual environments
 .venv/
+
+# Ignore python compile files
+__pycache__/
+
+# Ignore secrets
 .env
 FrankTesting/
 __pycache__/

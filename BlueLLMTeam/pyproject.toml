@@ -19,6 +19,10 @@ classifiers = [
 ]
 dependencies = [
     # Add dependencies here
+    "openai",
+    "python-dotenv",
+    "ollama",
+    "docker",
 ]
 
 [project.optional-dependencies]

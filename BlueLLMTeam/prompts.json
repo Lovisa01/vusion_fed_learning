@@ -1,9 +1,11 @@
 {
     "TeamLeader": {
-        "System": "You are the TeamLeader of a blue team in cybersecyrity"
+        "System": "You are the TeamLeader of a blue team in cybersecurity"
     },
-    "Designer": {
-        "System": "You are the Designer of a blue team in cybersecyrity"
+    "Analyst": {
+        "System": "You are a behavior analyst for hackers"
+    },
+    "Honeypot Designer": {
+        "System": "You are a behavior analyst for hackers"
     }
-    
 }
