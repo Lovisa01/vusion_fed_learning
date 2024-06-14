@@ -1,14 +1,11 @@
 #DECLARE ALL IMPORTS HERE.
 #BEFORE RUNNING CHECK REQUIREMENTES ARE INSTALLED THANKS!
 from abc import ABC, abstractmethod
-import pandas as pd
-import openai
-import torch
 from openai import OpenAI
 import os
-from dotenv import load_dotenv
 from abc import ABC, abstractmethod
 from typing import Dict
+from dotenv import load_dotenv
 
 # YOU WILL HAVE TO LOAD FROM YOUR ENVINVORNMENT FILE
 # Load environment variables from the .env file
@@ -28,10 +25,10 @@ class LLMEndpointBase(ABC):
 
         Arguments:
             prompt_dict: A dictionary with the following keys:
-                systemRole: The system prompt for this user
-                user: The current user
-                context: The previous context
-                message: The message to the LLM agent
+                systemRole: The system prompt for the system to act as.
+                user: The current user.
+                context: The previous context.
+                message: The message to the LLM agent.
                 model: The designated model to be used.
         
         Returns:

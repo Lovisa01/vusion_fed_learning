@@ -1,7 +1,4 @@
 ### Please add the packages need
-pandas
-torch
-transformers
 openai
 python-dotenv
 watchdog
