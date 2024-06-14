@@ -154,7 +154,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         root_dir_response = self.llm.ask(root_dir_prompt)
         root_folders = root_dir_response.content.split("\n")
 
-        generate_files(root_folders, self.fake_fs_data, 0, 2, 2, 3, root_dir_prompt, self.llm)
+        generate_files(root_folders, self.fake_fs, 0, 2, 2, 3, root_dir_prompt, self.llm)
 
         print("Created honeypot filesystem at", self.fake_fs)
  
