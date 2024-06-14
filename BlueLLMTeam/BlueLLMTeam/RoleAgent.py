@@ -3,6 +3,7 @@ import json
 import shutil
 import docker
 import logging
+import requests
 import subprocess
 from pathlib import Path
 from abc import ABC, abstractmethod
@@ -18,6 +19,8 @@ PROMPT_CONFIGURATION_FILE = os.environ.get("PROMPT_CONFIGURATION", DEFAULT_PROMP
 HONEYPOT_FS = ROOT_DIR / "Honeypot/tmpfs"
 
 logger = logging.getLogger(__name__)
+
+DB_ENDPOINT = "http://16.170.173.111:3000/logs"
 
 
 class AgentRoleBase(ABC):
@@ -141,7 +144,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         self.fake_fs = self.fake_fs_data / "honeyfs"
 
         # Container logs
-        self.logs = []
+        self.old_logs = set()
         self.logs_updated = False
 
     def create_honeypot(self, honeypot_description: str) -> str:
@@ -213,15 +216,21 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             logger.error(f"An error occurred when deploying Cowrie container. Error: {e}")
             raise
 
-    def get_logs(self) -> str:
+    def get_logs(self) -> dict:
         """
         Get all logs if they have been updated since the last time this function was called
         """
         self.update_logs()
         if self.logs_updated == True:
             self.logs_updated = False
-            return "\n".join(self.logs)
-        return ""
+            response = requests.get(DB_ENDPOINT)
+            if not response.status_code == 200:
+                logger.warning(f"Database endpoint {DB_ENDPOINT} returned non zero status code {response.status_code} when getting log records")
+                return {}
+            records = response.json()
+            print(records)
+            return records
+        return {}
 
     def update_logs(self) -> str:
         # Check that the container is deployed
@@ -246,10 +255,24 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             for record in f:
                 log = json.loads(record)
                 if log.get("eventid") == "cowrie.command.input":
-                    log_s = json.dumps(log)
-                    if log_s not in self.logs:
-                        self.logs.append(log_s)
+                    # Create a hash of the log (a sorted string)
+                    log_hash = json.dumps(log, sort_keys=True)
+                    # Only send log to database if it has not already been sent
+                    if log_hash not in self.old_logs:
+                        self.old_logs.add(log_hash)
                         self.logs_updated = True
+                        # Send to database
+                        data = {
+                            "src_ip": log["src_ip"],
+                            "session_id": log["session"],
+                            "time_stamp": log["timestamp"],
+                            "input_cmd": log["input"],
+                            "honeypot_name": "cowrie",
+                            "response_cmd": "",
+                        }
+                        response = requests.post(DB_ENDPOINT, json=data)
+                        if response.status_code != 200:
+                            logger.warning(f"Database endpoint {DB_ENDPOINT} returned a non zero status code {response.status_code} when posting new log record")
         
         # Remove tmp file
         os.remove(tmp_log)
