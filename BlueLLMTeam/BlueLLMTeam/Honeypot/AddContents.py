@@ -8,9 +8,20 @@ Feel free to add new type of files ass you need it
 """
 
 import os
+from abc import ABC, abstractmethod
 
-class AddContents:
-    def create_file_content(file_path):
+from BlueLLMTeam.BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
+
+class AddContentsBase(ABC):
+
+    @abstractmethod
+    def create_file_content(self, file_name, llm_endpoint: ChatGPTEndpoint):
+        """
+            Add all the code to add some content to a file. The Content can be generated using by passing content to GPT
+        """
+        pass
+class AddContents(AddContentsBase):
+    def create_file_content(self, file_path, llm_endpoint: ChatGPTEndpoint):
         # Check if the file exists
         if not os.path.exists(file_path):
             print(f"File {file_path} does not exist.")
@@ -21,19 +32,71 @@ class AddContents:
 
         # Determine the file type and create content accordingly
         if file_extension == '.java':
-            #Add a prompt engineering code here abd update the result to the content
-            content = "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, World!\");\n    }\n}\n"
+            try:
+                with open(file_path, 'w') as file:
+                    prompt = {
+                        "systemRole": "You are a Text genrator",
+                        "user": "user",
+                        "context": "I am a bread company",
+                        "message": "Give me a java code without any explanation",
+                        "model": "gpt-3.5-turbo"
+                    }
+                    file_response = llm_endpoint.ask(prompt)
+                    print(file_response)
+                    file.write(file_response.content)
+            except Exception as e:
+                print(f"Failed to add content to the file at {file_path}. Error: {e}")
         elif file_extension == '.py':
-            # Add a prompt engineering code here abd update the result to the content
-            content = "def main():\n    print(\"Hello, World!\")\n\nif __name__ == '__main__':\n    main()\n"
+            try:
+                with open(file_path, 'w') as file:
+                    prompt = {
+                        "systemRole": "You are a Text genrator",
+                        "user": "user",
+                        "context": "I am a bread company",
+                        "message": "Give me a python without any explanation",
+                        "model": "gpt-3.5-turbo"
+                    }
+                    file_response = llm_endpoint.ask(prompt)
+                    print(file_response)
+                    file.write(file_response.content)
+            except Exception as e:
+                print(f"Failed to add content to the file at {file_path}. Error: {e}")
         elif file_extension == '.txt':
-            # Add a prompt engineering code here abd update the result to the content
-            content = "This is a sample text file."
+            try:
+                with open(file_path, 'w') as file:
+                    prompt = {
+                        "systemRole": "You are a Text genrator",
+                        "user": "user",
+                        "context": "I am a bread company",
+                        "message": "Give me some text data without any explanation",
+                        "model": "gpt-3.5-turbo"
+                    }
+                    file_response = llm_endpoint.ask(prompt)
+                    print(file_response)
+                    file.write(file_response.content)
+            except Exception as e:
+                print(f"Failed to add content to the file at {file_path}. Error: {e}")
+        elif file_extension == '.c':
+            try:
+                with open(file_path, 'w') as file:
+                    prompt = {
+                        "systemRole": "You are a Text genrator",
+                        "user": "user",
+                        "context": "I am a bread company",
+                        "message": "Give me a c code without any explanation",
+                        "model": "gpt-3.5-turbo"
+                    }
+                    file_response = llm_endpoint.ask(prompt)
+                    print(file_response)
+                    file.write(file_response.content)
+            except Exception as e:
+                print(f"Failed to add content to the file at {file_path}. Error: {e}")
         else:
             print(f"Unsupported file type: {file_extension}")
             return
 
-        # Write the content to the file
-        with open(file_path, 'w') as file:
-            file.write(content)
-        print(f"Content written to {file_path}")
+
+if __name__ == "__main__":
+    myobj = AddContents()
+    llmobj = ChatGPTEndpoint()
+    myobj.create_file_content(file_path='mahesh.txt', llm_endpoint=llmobj)
