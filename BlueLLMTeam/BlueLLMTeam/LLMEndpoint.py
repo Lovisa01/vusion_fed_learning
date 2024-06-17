@@ -29,6 +29,7 @@ class LLMEndpointBase(ABC):
                 context: The previous context.
                 message: The message to the LLM agent.
                 model: The designated model to be used.
+
         
         Returns:
             response: response from LLM agent
@@ -39,13 +40,13 @@ class EchoEndpoint(LLMEndpointBase):
     """
     Endpoint that can be used for testing. It echos the message back to the sender
     """
-    def ask(self, prompt_dict: dict[str, str]) -> str:
+    def ask(self, prompt_dict: dict[str, str]):
         return prompt_dict["message"]
 
 
 class ChatGPTEndpoint(LLMEndpointBase):
 
-    def ask(self, prompt_dict: Dict[str, str]) -> str:
+    def ask(self, prompt_dict: Dict[str, str]):
         try:
             # Create a prompt from the prompt_dict
             inputmessages = [
@@ -57,7 +58,7 @@ class ChatGPTEndpoint(LLMEndpointBase):
             response = client.chat.completions.create(
                 model=prompt_dict.get("model", "gpt-3.5-turbo"),  # Specify the model you want to use
                 messages=inputmessages,
-                max_tokens=150
+                max_tokens=2048,
             )
             return response.choices[0].message
         except Exception as e:
