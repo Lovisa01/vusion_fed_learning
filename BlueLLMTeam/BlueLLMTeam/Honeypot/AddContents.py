@@ -10,11 +10,6 @@ from LLMEndpoint import ChatGPTEndpoint
 import json
 import os
 
-# Load JSON data from a file
-with open('data/companyinfo.json', 'r') as file:
-    company_info = json.load(file)
-
-
 class AddContents:
     def create_file_content(file_path):
         # Check if the file exists
@@ -27,33 +22,54 @@ class AddContents:
 
         # Determine the file type and create content accordingly
         if file_extension == '.java':
-            #Add a prompt engineering code here abd update the result to the content
-            content = "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, World!\");\n    }\n}\n"
+            try:
+                with open(file_path, 'w') as file:
+                    prompt = {
+                        "systemRole": "You are a Text genrator",
+                        "user": "user",
+                        "context": "I am a bread company",
+                        "message": "Give me a java code without any explanation",
+                        "model": "gpt-3.5-turbo"
+                    }
+                    file_response = llm_endpoint.ask(prompt)
+                    print(file_response)
+                    file.write(file_response.content)
+            except Exception as e:
+                print(f"Failed to add content to the file at {file_path}. Error: {e}")
         elif file_extension == '.py':
             # Add a prompt engineering code here abd update the result to the content
-            # Define the prompt_dict according to the required structure
-            
-            # Create an instance of ChatGPTEndpoint
-            endpoint = ChatGPTEndpoint()
-            
-            # Get the response from the ChatGPT endpoint
-            response = endpoint.ask(prompt_dict)
-            
-            if response:
-                print("ChatGPT Response:", response.content)
-            else:
-                print("Failed to get response from ChatGPT.")
-
+            content = "def main():\n    print(\"Hello, World!\")\n\nif __name__ == '__main__':\n    main()\n"
         elif file_extension == '.txt':
-            # Add a prompt engineering code here abd update the result to the content
-            content = "This is a sample text file."
+            try:
+                with open(file_path, 'w') as file:
+                    prompt = {
+                        "systemRole": "You are a Text genrator",
+                        "user": "user",
+                        "context": "I am a bread company",
+                        "message": "Give me some text data without any explanation",
+                        "model": "gpt-3.5-turbo"
+                    }
+                    file_response = llm_endpoint.ask(prompt)
+                    print(file_response)
+                    file.write(file_response.content)
+            except Exception as e:
+                print(f"Failed to add content to the file at {file_path}. Error: {e}")
+        elif file_extension == '.c':
+            try:
+                with open(file_path, 'w') as file:
+                    prompt = {
+                        "systemRole": "You are a Text genrator",
+                        "user": "user",
+                        "context": "I am a bread company",
+                        "message": "Give me a c code without any explanation",
+                        "model": "gpt-3.5-turbo"
+                    }
+                    file_response = llm_endpoint.ask(prompt)
+                    print(file_response)
+                    file.write(file_response.content)
+            except Exception as e:
+                print(f"Failed to add content to the file at {file_path}. Error: {e}")
         else:
             print(f"Unsupported file type: {file_extension}")
             return
 
-        # Write the content to the file
-        with open(file_path, 'w') as file:
-            file.write(content)
-        print(f"Content written to {file_path}")
-
-AddContents().create_file_content("frank.py")

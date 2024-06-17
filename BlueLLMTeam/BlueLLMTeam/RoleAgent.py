@@ -2,19 +2,23 @@ import os
 import json
 import shutil
 import docker
+import logging
 import subprocess
 from pathlib import Path
 from abc import ABC, abstractmethod
-
 
 from LLMEndpoint import LLMEndpointBase
 from Honeypot.createFiles import generate_files, generate_random_id
 from Honeypot.createfs import pickledir
 
+
 ROOT_DIR = Path(__file__).parent
 DEFAULT_PROMPT_CONFIGURATION_FILE = ROOT_DIR.parent / "prompts.json"
 PROMPT_CONFIGURATION_FILE = os.environ.get("PROMPT_CONFIGURATION", DEFAULT_PROMPT_CONFIGURATION_FILE)
 HONEYPOT_FS = ROOT_DIR / "Honeypot/tmpfs"
+
+logger = logging.getLogger(__name__)
+
 
 class AgentRoleBase(ABC):
     """
@@ -154,24 +158,25 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         root_dir_response = self.llm.ask(root_dir_prompt)
         root_folders = root_dir_response.content.split("\n")
 
-        generate_files(root_folders, self.fake_fs_data, 0, 2, 2, 3, root_dir_prompt, self.llm)
+        generate_files(root_folders, self.fake_fs, 0, 2, 2, 3, root_dir_prompt, self.llm)
 
-        print("Created honeypot filesystem at", self.fake_fs)
+        logger.info("Created honeypot filesystem at", self.fake_fs)
  
         pickledir(self.fake_fs, 3, self.fake_fs_data / "custom.pickle")
 
         try:
-        # Check if the source folder exists
+            # Check if the source folder exists
             if not os.path.exists(ROOT_DIR / "Honeypot/_honeyfs"):
-                print(f"Source folder does not exist.")
-                return
+                logger.error(f"Source folder does not exist.")
+                raise FileNotFoundError(f"Source folder for filesystem does not exist at {ROOT_DIR / 'Honeypot/_honeyfs'}")
 
             shutil.copytree(ROOT_DIR / "Honeypot/_honeyfs/etc", self.fake_fs / "etc")
             shutil.copytree(ROOT_DIR / "Honeypot/_honeyfs/proc", self.fake_fs / "proc")
-            print(f"Folder successfully copied.")
+            logger.info(f"Folder successfully copied.")
         
         except Exception as e:
-            print(f"An error occurred when copying honeyfs: {str(e)}")
+            logger.error(f"An error occurred when copying honeyfs: {str(e)}")
+            raise
 
     def deploy_honeypot(self):
         # Check if the honeypot is already deployed
@@ -181,11 +186,11 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         client = docker.from_env()
         image_name = "cowrie/cowrie:latest"
         try:
-            print("Pulling Cowrie image...")
+            logger.info("Pulling Cowrie image...")
             image = client.images.pull(image_name)
-            print("Successfully pulled Cowrie image.")
+            logger.info("Successfully pulled Cowrie image.")
 
-            print("Creating Cowrie container...")
+            logger.info("Creating Cowrie container...")
 
             self.cowrie_container = client.containers.run(
                 image=image_name,
@@ -196,14 +201,17 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                     self.fake_fs: {"bind": "/cowrie/cowrie-git/honeyfs/", "mode": "rw"}
                     },
             )
-            print("Successfully created Cowrie container ID: ", self.cowrie_container.id)
+            logger.info("Successfully created Cowrie container ID: ", self.cowrie_container.id)
 
         except docker.errors.APIError as e:
-            print(f"Failed to create Cowrie container. Error: {e}")
+            logger.error(f"Failed to create Cowrie container. Error: {e}")
+            raise
         except docker.errors.ImageNotFound as e:
-            print(f"Failed to pull Cowrie image. Error: {e}")
+            logger.error(f"Failed to pull Cowrie image. Error: {e}")
+            raise
         except Exception as e:
-            print(f"An error occurred when deploying Cowrie container. Error: {e}")
+            logger.error(f"An error occurred when deploying Cowrie container. Error: {e}")
+            raise
 
     def get_logs(self) -> str:
         """
