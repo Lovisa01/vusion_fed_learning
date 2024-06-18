@@ -2,8 +2,6 @@ import os
 import random
 import string
 import sys
-from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
-from BlueLLMTeam import PromptDict as prompt
 
 
 def generate_random_id(length=10):
@@ -16,10 +14,15 @@ def create_random_file(file_path, file_name, folder_name, prompt_dict: dict[str,
     """Create a random text file."""
     try:
         with open(file_path, 'w') as file:
-            python_suggestion = prompt.python_advisor(file_path)
-            advisor_response = llm_endpoint.ask(python_suggestion)
-            python_code = prompt.python_coder(advisor_response.content)
-            file_response = llm_endpoint.ask(python_code)
+            file_prompt = {
+                "systemRole": prompt_dict["systemRole"],
+                "user": prompt_dict["user"],
+                "context": prompt_dict["context"],
+                "message": "For a file with the filename " + file_name + " that exists in a folder " + file_path[file_path.find("/"):] + #this used the entire folder path except base directory, might want to use folder_name ? maybe not? (refine later)
+                 " in a linux file system, write example contents without any explanatory text. I only want the content of the file with no other exxplanation or extra characters.",
+                "model" : prompt_dict["model"]
+            }
+            file_response = llm_endpoint.ask(file_prompt)
             file.write(file_response.content)
     except Exception as e:
         print(f"Failed to create file at {file_path}. Error: {e}")
