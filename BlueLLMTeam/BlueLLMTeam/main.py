@@ -82,16 +82,27 @@ def main():
     # Decide on honeypots
     print(LLM_TEAM_LEAD)
     print("\nThinking about what honeypots to deploy...")
-    honeypots = team_lead.honeypot_design(context)
+    honeypot_count = team_lead.honeypot_amount(context)
 
-    print("Team Lead wants to deploy the following honeypots")
-    for honeypot_description in honeypots:
+    print("Team Lead wants to deploy the following honeypots: ")
+    for honeypot_type, count in honeypot_count.items():
+        print(f"- {honeypot_type}: {count}")
+    
+    if not input("Generate honeypot descriptions (y/n): ").lower() == "y":
+        print("Stopping deployment...")
+        return
+    
+    honeypot_descriptions = team_lead.honeypot_design(context, honeypot_count)
+
+    print("Team Lead wants to deploy the following honeypots: ")
+    for honeypot_description in honeypot_descriptions:
         print("#" * 30)
-        print(f"Type: {honeypot_description['type']}")
-        print(f"Description: {honeypot_description['description']}")
+        print(f"name: {honeypot_description['name']}")
+        print(f"type: {honeypot_description['type']}")
+        print(f"description: {honeypot_description['description']}")
         print("#" * 30)
     
-    if not input("Deploy honeypots (y/n): ").lower() == "y":
+    if not input("Deploy honeypots according to the descriptions (y/n): ").lower() == "y":
         print("Stopping deployment...")
         return
 
