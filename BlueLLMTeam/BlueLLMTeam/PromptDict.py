@@ -26,10 +26,10 @@ with open(data_folder / 'companyinfo.json', 'r') as file:
             "context": str(company_info),
             "message": "Task: Write a great description for a python developer to create a file that works with mongo db to generate queries and create analysis on the information.\
                 Step1: Analyse this folder structure: " + file_path + "\
-                    Step2: think about a python script based on the current context of the file directory provided in step1\
-                        Step3: Make this a very convincing python script where it creates functions.\
+                    Step2: think about a python script based on the current context of the file directory provided in step1. For example if the file structure is volvo-cncmachinery it should have some kind of g-code interpret. If it's a human resource file it should call a fake db for human resources informatione etc...\
+                        Step3: Think about the design for a python script making and calling functions.\
                                 Step 4: Provide the instructions to the python developer.",
-            "model" : "gpt-3.5-turbo",
+            "model" : "gpt-4o",
         }
         return (prompt_dict)
 
@@ -40,18 +40,19 @@ with open(data_folder / 'companyinfo.json', 'r') as file:
             "user": "Senior Python developer working for a company as prompted from the system. Write a script based on the prompt given from the systems designer.",
             "context": str(company_info),
             "message": "You must provide only code and here are the isntructions given by the designer:"  + prompt + " You may only provide python code nothing else.",
-            "model" : "gpt-3.5-turbo",
+            "model" : "gpt-3.5-turbo-0125",
+            "max_tokens":4096
         }
         return (prompt_dict)
     
     #TEMPLATE - copy and paste this for easy prompt generation. Data structure used to create prompts.
-    def generate_prompt(self):
+    def generate_prompt():
         prompt_dict = {
-            "systemRole": "You're a senior python developer. You need to optimize a python script file based on " + self + ". Ensure the script is highly efficient.",
+            "systemRole": "You're a senior python developer. You need to optimize a python script file based on. Ensure the script is highly efficient.",
             "user": "Senior Python developer working for a company as prompted from the system.",
-            "context": self,
+            "context": "context",
             "message": "Optimize a python script for this company to operate efficiently.",
-            "model" : "gpt-3.5-turbo",
+            "model" : "gpt-3.5-turbo-0125",
         }
         return (prompt_dict)
 

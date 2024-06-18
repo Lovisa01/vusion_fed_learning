@@ -9,8 +9,8 @@ Feel free to add new type of files ass you need it
 
 import os
 from abc import ABC, abstractmethod
-
-from BlueLLMTeam.BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
+from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
+from BlueLLMTeam import PromptDict as prompter
 
 class AddContentsBase(ABC):
 
@@ -49,15 +49,10 @@ class AddContents(AddContentsBase):
         elif file_extension == '.py':
             try:
                 with open(file_path, 'w') as file:
-                    prompt = {
-                        "systemRole": "You are a Text genrator",
-                        "user": "user",
-                        "context": "I am a bread company",
-                        "message": "Give me a python without any explanation",
-                        "model": "gpt-3.5-turbo"
-                    }
-                    file_response = llm_endpoint.ask(prompt)
-                    print(file_response)
+                    python_suggestion = prompter.python_advisor(file_path)
+                    advisor_response = llm_endpoint.ask(python_suggestion)
+                    python_code = prompter.python_coder(advisor_response.content)
+                    file_response = llm_endpoint.ask(python_code)
                     file.write(file_response.content)
             except Exception as e:
                 print(f"Failed to add content to the file at {file_path}. Error: {e}")
