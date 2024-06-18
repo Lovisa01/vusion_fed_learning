@@ -416,8 +416,9 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         os.remove(tmp_log)
 
     def stop(self):
-        self.cowrie_container.stop()
-        self.cowrie_container.remove()
+        if self.cowrie_container is not None:
+            self.cowrie_container.stop()
+            self.cowrie_container.remove()
         shutil.rmtree(self.fake_fs_data)
 
     def chat(self, conversation_history: list[dict]) -> str:

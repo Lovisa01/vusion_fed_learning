@@ -1,6 +1,7 @@
 import json
 import time
 
+from tqdm import tqdm
 from argparse import ArgumentParser
 from dataclasses import dataclass
 
@@ -68,16 +69,10 @@ def main():
     if args.verbose:
         print("\nJob information:")
         print(context)
-
-    # if not input("Deploy honeypots (y/n): ").lower() == "y":
-    #     print("Stopping deployment...")
-    #     return
     
-    # Create agents
+    # Create LLM endpoint and team leader
     llm_endpoint = ChatGPTEndpoint()
     team_lead = TeamLeaderRole(llm_endpoint)
-    designer = CowrieDesignerRole(llm_endpoint)
-    analyst = CowrieAnalystRole(llm_endpoint)
 
     # Decide on honeypots
     print(LLM_TEAM_LEAD)
@@ -100,23 +95,31 @@ def main():
         print(f"name: {honeypot_description['name']}")
         print(f"type: {honeypot_description['type']}")
         print(f"description: {honeypot_description['description']}")
-        print("#" * 30)
+    print("#" * 30)
     
     if not input("Deploy honeypots according to the descriptions (y/n): ").lower() == "y":
         print("Stopping deployment...")
         return
 
-    # Design and deploy honeypot
+    # Design the contents of all honeypots
     print(LLM_DESIGNER)
-    print("Createing custom file system for honeypot...")
-    designer.create_honeypot(json.dumps(context, indent=4))
-    print("Deploying honeypot...")
-    designer.deploy_honeypot()
-    print("Waiting for container startup (20 seconds, temporarily hardcoded)")
+    print("Creating custom contents for all requested honeypots...")
+    designers: list[CowrieDesignerRole] = []
+    for honeypot_description in tqdm(honeypot_descriptions):
+        designer = CowrieDesignerRole(llm_endpoint)
+        designers.append(designer)
+        designer.create_honeypot(json.dumps(context, indent=4))
+    
+    print("Deploying honeypots...")
+    for designer in tqdm(designers):
+        designer.deploy_honeypot()
+    
+    print("Waiting for containers to startup (20 seconds, temporarily hardcoded)")
     time.sleep(20)
     
     # Monitor attacker
     print(LLM_ANALYST)
+    analyst = CowrieAnalystRole(llm_endpoint)
     print("Ready to analyse attackers. Waiting for connections...")
     try:
         while True:
