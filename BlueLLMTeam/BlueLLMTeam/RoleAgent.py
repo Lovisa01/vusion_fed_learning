@@ -115,7 +115,6 @@ Based on the company information provided and the available honeypots, generate 
             "context": "",
             "message": replace_tokens(prompt, tokens),
         }
-        print(prompt_dict["message"])
 
         for _ in range(retries):
             response = self.llm.ask(prompt_dict)
@@ -368,7 +367,6 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                 logger.warning(f"Database endpoint {DB_ENDPOINT} returned non zero status code {response.status_code} when getting log records")
                 return {}
             records = response.json()
-            print(records)
             return records
         return {}
 
