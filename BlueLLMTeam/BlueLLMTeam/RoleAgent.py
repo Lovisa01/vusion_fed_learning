@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 from LLMEndpoint import LLMEndpointBase
 from Honeypot.createFiles import generate_files, generate_random_id
 from Honeypot.createfs import pickledir
+from BlueLLMTeam.utils import extract_json_from_text
 
 
 ROOT_DIR = Path(__file__).parent
@@ -68,6 +69,58 @@ class TeamLeaderRole(AgentRoleBase):
 
     def __init__(self, llm_endpoint: LLMEndpointBase) -> None:
         super().__init__(role="TeamLeader", llm_endpoint=llm_endpoint)
+
+    def chat(self, conversation_history: list[dict]) -> str:
+        raise NotImplementedError
+    
+    def honeypot_design(self, context: dict, retries: int = 5) -> dict:
+        """
+        Get the honeypot design
+        """
+        prompt = """
+You are to deploy one or more honeypots to defend a business with the following information:
+# Company Information
+{CONTEXT}
+
+You are only allowed the resources from the following list:
+- Cowrie: an SSH Honeypot
+
+Give a list of honeypots that would be good to setup with your given resources.
+Each suggestion you make will be passed on to a honeypot designer that will create the filesystem. 
+Therefore you should give clear instructions for the honeypots purpose.
+Give your response as a json object so that it can be easily parsed. Give only a JSON object. The JSON should have the following structure:
+
+[
+    {
+        "type": "Honeypot type",
+        "description": "short description of the file system"
+    },
+]
+"""
+        prompt_dict = {
+            "systemRole": self.prompts.get("System"),
+            "user": "",
+            "context": "",
+            "message": prompt.replace("{CONTEXT}", json.dumps(context)),
+        }
+        for _ in range(retries):
+            response = self.llm.ask(prompt_dict).content
+            try:
+                json_data = extract_json_from_text(response)
+            except ValueError:
+                logger.warning("Failed to parse JSON data from team leader response")
+                continue
+            # Check the contents
+            try:
+                for item in json_data:
+                    if "type" not in item or "description" not in item:
+                        logger.warning("Response had wrong JSON format")
+                        continue
+            except:
+                logger.warning("Response had wrong JSON format")
+                continue
+            return json_data
+        raise ValueError(f"Failed to parse team leader response after {retries} attempts")
 
 
 class AnalystRole(AgentRoleBase):

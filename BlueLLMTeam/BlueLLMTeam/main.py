@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from BlueLLMTeam.RoleAgent import TeamLeaderRole, CowrieAnalystRole, CowrieDesignerRole
 from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
-from BlueLLMTeam.banner import TEAM_BANNER, LLM_DESIGNER, LLM_ANALYST
+from BlueLLMTeam.banner import TEAM_BANNER, LLM_DESIGNER, LLM_ANALYST, LLM_TEAM_LEAD
 
 
 @dataclass
@@ -69,14 +69,31 @@ def main():
         print("\nJob information:")
         print(context)
 
-    if not input("Deploy honeypots (y/n): ").lower() == "y":
-        print("Stopping deployment...")
-        return
+    # if not input("Deploy honeypots (y/n): ").lower() == "y":
+    #     print("Stopping deployment...")
+    #     return
     
     # Create agents
     llm_endpoint = ChatGPTEndpoint()
+    team_lead = TeamLeaderRole(llm_endpoint)
     designer = CowrieDesignerRole(llm_endpoint)
     analyst = CowrieAnalystRole(llm_endpoint)
+
+    # Decide on honeypots
+    print(LLM_TEAM_LEAD)
+    print("\nThinking about what honeypots to deploy...")
+    honeypots = team_lead.honeypot_design(context)
+
+    print("Team Lead wants to deploy the following honeypots")
+    for honeypot_description in honeypots:
+        print("#" * 30)
+        print(f"Type: {honeypot_description['type']}")
+        print(f"Description: {honeypot_description['description']}")
+        print("#" * 30)
+    
+    if not input("Deploy honeypots (y/n): ").lower() == "y":
+        print("Stopping deployment...")
+        return
 
     # Design and deploy honeypot
     print(LLM_DESIGNER)
