@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from random import randint
 
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
-from BlueLLMTeam.Honeypot.createFiles import generate_files, generate_random_id
+from BlueLLMTeam.Honeypot.createFiles import generate_file_system, generate_random_id
 from BlueLLMTeam.Honeypot.createfs import pickledir
 from BlueLLMTeam.utils import extract_json_from_text, extract_markdown_list, replace_tokens
 
@@ -286,25 +286,18 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         self.old_logs = set()
         self.logs_updated = False
 
-    def create_honeypot(self, honeypot_description: str) -> str:
-        #TODO: Move this prompt to Simon's prompt file
-        # Prompt for the root directory of the file system
-        root_dir_prompt = {
-                "systemRole": "You're a linux terminal that needs to provide a file system for a car manufacturing company.",
-                "user": "Linux developer",
-                "context": "Filenames and file contents should be based on a car manufacturing company. The files should be files that you would find in an administrative file system of a car manufacturing company",
-                "message": "Give an exmaple of the base directory of a linux file system, without explanatory text, folder names only, one folder per line, without any special characters or numbers, just the names of the folders",
-                "model" : "gpt-3.5-turbo"
-            }
-
-        root_dir_response = self.llm.ask(root_dir_prompt)
-        root_folders = root_dir_response.content.split("\n")
-
-        generate_files(root_folders, self.fake_fs, 0, 2, 2, 3, root_dir_prompt, self.llm)
+    def create_honeypot(self, honeypot_description: str, depth: int = 3) -> str:
+        generate_file_system(
+            local_fs=self.fake_fs,
+            current_folder="/home",
+            honey_context=honeypot_description,
+            llm=self.llm,
+            max_depth=depth,
+        )
 
         logger.info("Created honeypot filesystem at", self.fake_fs)
  
-        pickledir(self.fake_fs, 3, self.fake_fs_data / "custom.pickle")
+        pickledir(self.fake_fs, depth, self.fake_fs_data / "custom.pickle")
 
         try:
             # Check if the source folder exists

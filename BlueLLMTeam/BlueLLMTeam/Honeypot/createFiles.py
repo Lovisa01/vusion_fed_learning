@@ -1,8 +1,11 @@
 import os
 import random
 import string
-import sys
+from pathlib import Path
+import threading
+
 from BlueLLMTeam import PromptDict as prompt
+from BlueLLMTeam.LLMEndpoint import LLMEndpointBase, ChatGPTEndpoint
 
 def generate_random_id(length=10):
     """Generate a random id of a given length."""
@@ -10,7 +13,7 @@ def generate_random_id(length=10):
     return ''.join(random.choice(letters) for _ in range(length))
 
 
-def create_random_file(file_path, file_name, folder_name, prompt_dict: dict[str, str], llm_endpoint):
+def generate_file_contents(file_path, file_name, folder_name, prompt_dict: dict[str, str], llm_endpoint):
     """Create a random text file."""
     try:
         with open(file_path, 'w') as file:
@@ -23,25 +26,88 @@ def create_random_file(file_path, file_name, folder_name, prompt_dict: dict[str,
         print(f"Failed to create file at {file_path}. Error: {e}")
 
 
-def generate_files(folders, current_path, depth, maxDepth, maxContent, maxFolders, prompt_dict: dict[str, str], llm_endpoint):
-    for i, folder in enumerate(folders):
-        if depth < maxDepth and i < maxFolders:
-            new_path = os.path.join(current_path, folder)
-            os.makedirs(new_path, exist_ok=True)
-            folder_prompt = {
-                "systemRole": prompt_dict["systemRole"],
-                "user": prompt_dict["user"],
-                "context": prompt_dict["context"],
-                "message": "Give an example directory listing for the folder " + folder + " in a linux file system, file names and folder names only, one per line, without explanatory text, where subfolders are prefixed with #. Do not use placeholder names, give everything a name that is related to the company or the industry.",
-                "model" : prompt_dict["model"]
+def generate_file_system(local_fs: Path, current_folder: str, honey_context: str, llm: LLMEndpointBase, depth: int = 0, max_depth: int = 5):
+    """
+    Generate a file system recursively. 
+    
+    From the 'current_folder' generate subfolders and files. 
+    Recursively generate more contents in the subfolders and
+    generate contents for the files with an LLM.
+
+    Break at a maximum depth to stop to deep filesystems
+
+    Args:
+        local_fs: path to the local storage of the filesystem
+        current_folder: current folder to generate contents for
+        honey_context: the context for the filesystem
+        llm: the LLM endpoint to use for prompting
+        depth: current depth
+        max_depth: maximum depth, break if this is exceeded
+    """
+    if depth > max_depth:
+        return
+    
+    tokens = {
+        "HONEY_DESCRIPTION": honey_context,
+        "PATH": current_folder,
+    }
+    prompt_dict = prompt.file_system_creator(tokens)
+    response: str = llm.ask(prompt_dict).content
+
+    folder_contents = response.split("\n")
+
+    threads: list[threading.Thread] = []
+
+    for folder_content in folder_contents:
+        folder_content = folder_content.strip()
+
+        # Ignore empty lines
+        if not folder_content:
+            continue
+
+        if folder_content.startswith("#"):
+            # Remove '#' from folder name
+            folder_name = folder_content[1:].strip()
+
+            # Create folder on local OS
+            next_folder = os.path.join(current_folder, folder_name)
+            local_path = local_fs / next_folder.lstrip("/")
+            local_path.mkdir(parents=True)
+
+            # Recursively add more folders in a new thread
+            kwargs = {
+                "local_fs" : local_fs,
+                "current_folder" : next_folder,
+                "honey_context" : honey_context,
+                "llm" : llm,
+                "depth" : depth+1,
+                "max_depth" : max_depth,
             }
-            folder_response = llm_endpoint.ask(folder_prompt)
-            content = folder_response.content.split("\n")
+            t = threading.Thread(target=generate_file_system, kwargs=kwargs)
+            threads.append(t)
+        else:
+            file_path = os.path.join(current_folder, folder_content)
+            local_file_path = local_fs / file_path.lstrip("/")
 
-            for index, item in enumerate(content):
-                if index <= maxContent:
-                    if item.startswith("#"):
-                        generate_files([item[1:]], new_path, depth+1, maxDepth, maxContent, maxFolders, prompt_dict, llm_endpoint)
-                    else:
-                        create_random_file(os.path.join(new_path, item), item, folder, prompt_dict, llm_endpoint)
+            # Temp solution
+            t = threading.Thread(target=local_file_path.touch)
+            # Generate file contents
+            # kwargs = {
+            #     "file_path": file_path,
+            #     "honey_context": honey_context,
+            #     "llm": llm,
+            # }
+            # t = threading.Thread(target=generate_file_contents, kwargs=kwargs)
+            threads.append(t)
+            
+    # Spawn new threads
+    for t in threads:
+        t.start()
+    
+    # Wait for all threads to complete
+    for t in threads:
+        t.join()
 
+
+if __name__ == "__main__":
+    generate_file_system(Path("home"), "/home", "SSH honeypot with a python server", ChatGPTEndpoint())

@@ -97,7 +97,7 @@ def main():
         print(f"description: {honeypot_description['description']}")
     print("#" * 30)
     
-    if not input("Deploy honeypots according to the descriptions (y/n): ").lower() == "y":
+    if not input("Create honeypots according to the descriptions (y/n): ").lower() == "y":
         print("Stopping deployment...")
         return
 
@@ -108,7 +108,11 @@ def main():
     for honeypot_description in tqdm(honeypot_descriptions):
         designer = CowrieDesignerRole(llm_endpoint)
         designers.append(designer)
-        designer.create_honeypot(json.dumps(context, indent=4))
+        designer.create_honeypot(honeypot_description["description"])
+    
+    if not input("Deploy honeypots according to the descriptions (y/n): ").lower() == "y":
+        print("Stopping deployment...")
+        return
     
     print("Deploying honeypots...")
     for designer in tqdm(designers):
