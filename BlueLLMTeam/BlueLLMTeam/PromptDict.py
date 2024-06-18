@@ -44,6 +44,17 @@ with open(data_folder / 'companyinfo.json', 'r') as file:
             "max_tokens":4096
         }
         return (prompt_dict)
+
+    #Team advisor for interpreting the information before coming up with a complete solution.
+    def generate_prompt():
+        prompt_dict = {
+            "systemRole": "You're a senior python developer. You need to optimize a python script file based on. Ensure the script is highly efficient.",
+            "user": "Senior Python developer working for a company as prompted from the system.",
+            "context": "context",
+            "message": "Optimize a python script for this company to operate efficiently.",
+            "model" : "gpt-3.5-turbo-0125",
+        }
+        return (prompt_dict)
     
     #TEMPLATE - copy and paste this for easy prompt generation. Data structure used to create prompts.
     def generate_prompt():
@@ -55,4 +66,6 @@ with open(data_folder / 'companyinfo.json', 'r') as file:
             "model" : "gpt-3.5-turbo-0125",
         }
         return (prompt_dict)
+    
+
 
