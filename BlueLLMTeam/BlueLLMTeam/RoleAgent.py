@@ -9,9 +9,9 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from random import randint
 
-from LLMEndpoint import LLMEndpointBase
-from Honeypot.createFiles import generate_files, generate_random_id
-from Honeypot.createfs import pickledir
+from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
+from BlueLLMTeam.Honeypot.createFiles import generate_files, generate_random_id
+from BlueLLMTeam.Honeypot.createfs import pickledir
 from BlueLLMTeam.utils import extract_json_from_text, extract_markdown_list, replace_tokens
 
 
