@@ -80,7 +80,7 @@ def generate_file_system(local_fs: Path, current_folder: str, honey_context: str
                 "current_folder" : next_folder,
                 "honey_context" : honey_context,
                 "llm" : llm,
-                "depth" : depth+1,
+                "depth" : depth + 1,
                 "max_depth" : max_depth,
             }
             t = threading.Thread(target=generate_file_system, kwargs=kwargs)

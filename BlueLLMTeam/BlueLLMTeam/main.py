@@ -10,6 +10,9 @@ from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
 from BlueLLMTeam.banner import TEAM_BANNER, LLM_DESIGNER, LLM_ANALYST, LLM_TEAM_LEAD
 
 
+designers: list[CowrieDesignerRole] = []
+
+
 @dataclass
 class Arguments:
     context_file: str
@@ -42,6 +45,12 @@ class Arguments:
         s += f"\nUpdate frequency: {self.frequency}"
         s += f"\nVerbosity level: {self.verbosity}"
         return s
+
+
+def quit():
+    # Cleanup designers
+    for designer in designers:
+        designer.stop()
 
 
 def main():
@@ -104,7 +113,6 @@ def main():
     # Design the contents of all honeypots
     print(LLM_DESIGNER)
     print("Creating custom contents for all requested honeypots...")
-    designers: list[CowrieDesignerRole] = []
     for honeypot_description in tqdm(honeypot_descriptions):
         designer = CowrieDesignerRole(llm_endpoint)
         designers.append(designer)
@@ -159,4 +167,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        quit()
