@@ -13,6 +13,7 @@ from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
 from BlueLLMTeam.Honeypot.createFiles import generate_file_system, generate_random_id
 from BlueLLMTeam.Honeypot.createfs import pickledir
 from BlueLLMTeam.utils import extract_json_from_text, extract_markdown_list, replace_tokens
+from BlueLLMTeam.db_interaction import add_log
 
 
 ROOT_DIR = Path(__file__).parent
@@ -21,8 +22,6 @@ PROMPT_CONFIGURATION_FILE = os.environ.get("PROMPT_CONFIGURATION", DEFAULT_PROMP
 HONEYPOT_FS = ROOT_DIR / "Honeypot/tmpfs"
 
 logger = logging.getLogger(__name__)
-
-DB_ENDPOINT = "http://16.170.173.111:3000/logs"
 
 AVAILABLE_HONEYPOTS = {
     "cowrie": "An SSH honeypot"
@@ -348,21 +347,6 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             logger.error(f"An error occurred when deploying Cowrie container. Error: {e}")
             raise
 
-    def get_logs(self) -> dict:
-        """
-        Get all logs if they have been updated since the last time this function was called
-        """
-        self.update_logs()
-        if self.logs_updated == True:
-            self.logs_updated = False
-            response = requests.get(DB_ENDPOINT)
-            if not response.status_code == 200:
-                logger.warning(f"Database endpoint {DB_ENDPOINT} returned non zero status code {response.status_code} when getting log records")
-                return {}
-            records = response.json()
-            return records
-        return {}
-
     def update_logs(self) -> str:
         # Check that the container is deployed
         if self.cowrie_container is None:
@@ -380,7 +364,6 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         res.check_returncode()
 
         # Read file contents into the logs array
-        logs = []
         with open(tmp_log, "r") as f:
             # One json record for each line
             for record in f:
@@ -401,18 +384,20 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                             "honeypot_name": "cowrie",
                             "response_cmd": "",
                         }
-                        response = requests.post(DB_ENDPOINT, json=data)
-                        if response.status_code != 200:
-                            logger.warning(f"Database endpoint {DB_ENDPOINT} returned a non zero status code {response.status_code} when posting new log record")
-        
+                    
+                        if not add_log(data):
+                            logger.warning("Failed to add data to the database")
         # Remove tmp file
         os.remove(tmp_log)
 
     def stop(self):
-        if self.cowrie_container is not None:
+        if self.container_running():
             self.cowrie_container.stop()
             self.cowrie_container.remove()
         shutil.rmtree(self.fake_fs_data)
+
+    def container_running(self) -> bool:
+        return self.cowrie_container is not None
 
     def chat(self, conversation_history: list[dict]) -> str:
         raise NotImplementedError("Not yet implemented")

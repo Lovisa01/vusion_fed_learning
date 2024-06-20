@@ -1,5 +1,6 @@
 import json
 import time
+import threading
 
 from tqdm import tqdm
 from argparse import ArgumentParser
@@ -8,6 +9,7 @@ from dataclasses import dataclass
 from BlueLLMTeam.RoleAgent import TeamLeaderRole, CowrieAnalystRole, CowrieDesignerRole
 from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
 from BlueLLMTeam.banner import TEAM_BANNER, LLM_DESIGNER, LLM_ANALYST, LLM_TEAM_LEAD
+from BlueLLMTeam.monitor import monitor_logs, update_logs
 
 
 designers: list[CowrieDesignerRole] = []
@@ -129,41 +131,23 @@ def main():
     print("Waiting for containers to startup (20 seconds, temporarily hardcoded)")
     time.sleep(20)
     
-    # Monitor attacker
-    print(LLM_ANALYST)
-    analyst = CowrieAnalystRole(llm_endpoint)
-    print("Ready to analyse attackers. Waiting for connections...")
-    try:
-        while True:
-            start_time = time.time_ns()
-            
-            logs = designer.get_logs()
-            if logs:
-                print("\nNew interaction with the honeypot")
-                print("##### Analyzing the following logs #####")
-                print(logs)
-                print("########################################")
-                print("\nThinking...")
-                response = analyst.analyse_logs(logs).content
-                print("##### Analyst result #####")
-                print(response)
-                print("##########################")
-                print("Waiting for more interactions...")
+    # Watch logs in a separate thread
+    kwargs = {
+        "frequency": args.frequency,
+        "designers": designers,
+        "verbosity": args.verbosity,
+    }
+    update_logs_thread = threading.Thread(target=update_logs, kwargs=kwargs)
+    update_logs_thread.start()
 
-            # Sleep until next loop
-            exec_time = (time.time_ns() - start_time) / 1e9
-            sleep_time = 1 / args.frequency - exec_time
-            
-            if sleep_time > 0:
-                if args.verbosity > 3:
-                    print(f"Sleeping for {sleep_time} seconds")
-                time.sleep(sleep_time)
-    except KeyboardInterrupt:
-        pass
+    # Monitor attacker
+    monitor_logs(args.frequency, args.verbosity)
 
     print("Stopping execution")
     print("Removing containers and temp files")
-    designer.stop()
+    quit()
+    print("Stopping log thread")
+    update_logs_thread.join()
 
 
 if __name__ == "__main__":
