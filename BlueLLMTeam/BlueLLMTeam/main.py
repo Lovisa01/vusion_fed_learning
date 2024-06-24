@@ -1,15 +1,17 @@
 import json
 import time
 import threading
+import logging
 
 from tqdm import tqdm
 from argparse import ArgumentParser
 from dataclasses import dataclass
 
-from BlueLLMTeam.RoleAgent import TeamLeaderRole, CowrieAnalystRole, CowrieDesignerRole
+from BlueLLMTeam.RoleAgent import TeamLeaderRole, CowrieDesignerRole
 from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
-from BlueLLMTeam.banner import TEAM_BANNER, LLM_DESIGNER, LLM_ANALYST, LLM_TEAM_LEAD
+from BlueLLMTeam.banner import TEAM_BANNER, LLM_DESIGNER, LLM_TEAM_LEAD
 from BlueLLMTeam.monitor import monitor_logs, update_logs
+from BlueLLMTeam.utils import verify_docker_installation
 
 
 designers: list[CowrieDesignerRole] = []
@@ -58,9 +60,22 @@ def quit():
 def main():
     # Greeting
     print(TEAM_BANNER)
+    print("\nChecking system...")
 
     # Parse CLI arguments
     args = Arguments.from_cli()
+
+    log_level = logging.WARNING
+    if args.verbosity == 1:
+        log_level = logging.INFO
+    elif args.verbosity > 1:
+        log_level = logging.DEBUG
+    logging.basicConfig(level=log_level)
+
+    # Verify docker
+    if not verify_docker_installation():
+        print("Failed to verify the docker installation...")
+        return
 
     if args.verbose:
         print("\nRunning with the following arguments:")
