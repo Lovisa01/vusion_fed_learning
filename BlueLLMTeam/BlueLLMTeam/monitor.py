@@ -62,7 +62,7 @@ def monitor_logs(frequency: float, verbosity: int = 0):
             for session_id in sessions:
                 analyze_session(session_id, analyst)
     except KeyboardInterrupt:
-        pass
+        print("User interrupted main thread. Terminating program...")
 
 
 def update_logs(frequency: float, designers: list[CowrieDesignerRole], verbosity: int = 0):
