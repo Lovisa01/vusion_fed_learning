@@ -6,6 +6,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Dict
 from dotenv import load_dotenv
+import ollama
 # YOU WILL HAVE TO LOAD FROM YOUR ENVINVORNMENT FILE
 # Load environment variables from the .env file
 load_dotenv()
