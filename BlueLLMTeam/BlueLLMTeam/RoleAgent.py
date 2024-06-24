@@ -1,9 +1,9 @@
 import os
 import json
+import time
 import shutil
 import docker
 import logging
-import requests
 import subprocess
 from pathlib import Path
 from abc import ABC, abstractmethod
@@ -248,8 +248,11 @@ class CowrieAnalystRole(AnalystRole):
 
 class HoneypotDesignerRole(AgentRoleBase):
 
+    used_ports = set()
+
     def __init__(self, llm_endpoint: LLMEndpointBase) -> None:
         super().__init__(role="Honeypot Designer", llm_endpoint=llm_endpoint)
+        self.port = None
     
     @abstractmethod
     def create_honeypot(self, honeypot_description: str) -> str:
@@ -268,6 +271,19 @@ class HoneypotDesignerRole(AgentRoleBase):
         """
         Deploy a already created honeypot
         """
+
+    def next_open_port(cls, start_port: int = 2222) -> int:
+        """
+        Return the next open port, starting from start_port
+        """
+        while start_port in cls.used_ports:
+            start_port += 1
+        cls.used_ports.add(start_port)
+        return start_port
+
+    def stop(self):
+        if self.port is not None:
+            self.used_ports.remove(self.port)
 
 
 class CowrieDesignerRole(HoneypotDesignerRole):
@@ -321,15 +337,16 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         image_name = "cowrie/cowrie:latest"
         try:
             logger.info("Pulling Cowrie image...")
-            image = client.images.pull(image_name)
+            client.images.pull(image_name)
             logger.info("Successfully pulled Cowrie image.")
 
             logger.info("Creating Cowrie container...")
 
+            self.port = self.next_open_port()
             self.cowrie_container = client.containers.run(
                 image=image_name,
                 detach=True,
-                ports={"2222/tcp": 2222},
+                ports={"2222/tcp": self.port},
                 volumes={
                     self.fake_fs_data / "custom.pickle": {"bind": "/cowrie/cowrie-git/share/cowrie/fs.pickle", "mode": "rw"},
                     self.fake_fs: {"bind": "/cowrie/cowrie-git/honeyfs/", "mode": "rw"}
@@ -346,6 +363,10 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         except Exception as e:
             logger.error(f"An error occurred when deploying Cowrie container. Error: {e}")
             raise
+
+        while self.cowrie_container.status != "running":
+            time.sleep(1)
+            self.cowrie_container.reload()
 
     def update_logs(self) -> str:
         # Check that the container is deployed
@@ -391,9 +412,11 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         os.remove(tmp_log)
 
     def stop(self):
+        super().stop()
         if self.container_running():
             self.cowrie_container.stop()
             self.cowrie_container.remove()
+            self.cowrie_container = None
         shutil.rmtree(self.fake_fs_data)
 
     def container_running(self) -> bool:
