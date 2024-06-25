@@ -22,6 +22,7 @@ class Arguments:
     context_file: str
     verbosity: int
     frequency: float
+    yes: bool
 
     @classmethod
     def from_cli(cls):
@@ -32,12 +33,14 @@ class Arguments:
         parser.add_argument("--context", "-c", help="JSON data with the job description")
         parser.add_argument("--verbose", "-v", action="count", default=0, help="Increase verbosity level")
         parser.add_argument("--frequency", "-f", type=float, default=1, help="Update frequency of the analyst")
+        parser.add_argument("--yes", "-y", action="store_true", help="Skip all confirmations and allow all actions")
         
         args = parser.parse_args()
         return cls(
             context_file=args.context,
             verbosity=args.verbose,
             frequency=args.frequency,
+            yes=args.yes,
         )
     
     @property
@@ -55,6 +58,25 @@ def quit():
     # Cleanup designers
     for designer in designers:
         designer.stop()
+
+
+def happy_with_llm_decision(prompt: str, yes: bool = False) -> bool:
+    if yes:
+        return True
+    
+    # Prompt until yes or no answer
+    while True:
+        a = input(f"{prompt} (y/n/r): ").lower()
+        if a in ["y", "n", "r"]:
+            break
+        print(f"{a} is not a valid input. Only (y)es, (n)o, or (r)etry are valid")
+    
+    if a == "y":
+        return True
+    if a == "r":
+        return False
+    # Quit the application
+    exit()
 
 
 def main():
@@ -102,49 +124,47 @@ def main():
 
     # Decide on honeypots
     print(LLM_TEAM_LEAD)
-    print("\nThinking about what honeypots to deploy...")
-    honeypot_count = team_lead.honeypot_amount(context)
+    while True:
+        print("\nThinking about what honeypots to deploy...")
+        honeypot_count = team_lead.honeypot_amount(context)
+        
+        print("Team Lead wants to deploy the following honeypots: ")
+        for honeypot_type, count in honeypot_count.items():
+            print(f"- {honeypot_type}: {count}")
 
-    print("Team Lead wants to deploy the following honeypots: ")
-    for honeypot_type, count in honeypot_count.items():
-        print(f"- {honeypot_type}: {count}")
+        if happy_with_llm_decision("Generate descriptions for all honeypots", args.yes):
+            break
     
-    if not input("Generate honeypot descriptions (y/n): ").lower() == "y":
-        print("Stopping deployment...")
-        return
-    
-    honeypot_descriptions = team_lead.honeypot_design(context, honeypot_count)
+    # Create honeypot descriptions
+    while True:
+        honeypot_descriptions = team_lead.honeypot_design(context, honeypot_count)
 
-    print("Team Lead wants to deploy the following honeypots: ")
-    for honeypot_description in honeypot_descriptions:
+        print("Team Lead wants to deploy the following honeypots: ")
+        for honeypot_description in honeypot_descriptions:
+            print("#" * 30)
+            print(f"name: {honeypot_description['name']}")
+            print(f"type: {honeypot_description['type']}")
+            print(f"description: {honeypot_description['description']}")
         print("#" * 30)
-        print(f"name: {honeypot_description['name']}")
-        print(f"type: {honeypot_description['type']}")
-        print(f"description: {honeypot_description['description']}")
-    print("#" * 30)
-    
-    if not input("Create honeypots according to the descriptions (y/n): ").lower() == "y":
-        print("Stopping deployment...")
-        return
+        
+        if happy_with_llm_decision("Create honeypots according to the descriptions", args.yes):
+            break
 
     # Design the contents of all honeypots
     print(LLM_DESIGNER)
-    print("Creating custom contents for all requested honeypots...")
-    for honeypot_description in tqdm(honeypot_descriptions):
-        designer = CowrieDesignerRole(llm_endpoint)
-        designers.append(designer)
-        designer.create_honeypot(honeypot_description["description"])
-    
-    if not input("Deploy honeypots according to the descriptions (y/n): ").lower() == "y":
-        print("Stopping deployment...")
-        return
+    while True:
+        print("Creating custom contents for all requested honeypots...")
+        for honeypot_description in tqdm(honeypot_descriptions):
+            designer = CowrieDesignerRole(llm_endpoint)
+            designers.append(designer)
+            designer.create_honeypot(honeypot_description["description"])
+        
+        if happy_with_llm_decision("Deploy honeypots according to the descriptions", args.yes):
+            break
     
     print("Deploying honeypots...")
     for designer in tqdm(designers):
         designer.deploy_honeypot()
-    
-    print("Waiting for containers to startup (20 seconds, temporarily hardcoded)")
-    time.sleep(20)
     
     # Watch logs in a separate thread
     kwargs = {
@@ -159,14 +179,11 @@ def main():
     monitor_logs(args.frequency, args.verbosity)
 
     print("Stopping execution")
-    print("Removing containers and temp files")
-    quit()
-    print("Stopping log thread")
-    update_logs_thread.join()
 
 
 if __name__ == "__main__":
     try:
         main()
     finally:
+        print("Cleanup of containers and temporary files...")
         quit()

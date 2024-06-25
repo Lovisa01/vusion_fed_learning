@@ -382,7 +382,9 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         res = subprocess.run(docker_cp, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
         # Raise error if command failed
-        res.check_returncode()
+        if res.returncode != 0:
+            logger.warning("Failed to copy logs from the docker container")
+            return
 
         # Read file contents into the logs array
         with open(tmp_log, "r") as f:
@@ -409,7 +411,8 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                         if not add_log(data):
                             logger.warning("Failed to add data to the database")
         # Remove tmp file
-        os.remove(tmp_log)
+        if os.path.exists(tmp_log):
+            os.remove(tmp_log)
 
     def stop(self):
         super().stop()
@@ -417,7 +420,8 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             self.cowrie_container.stop()
             self.cowrie_container.remove()
             self.cowrie_container = None
-        shutil.rmtree(self.fake_fs_data, ignore_errors=True)
+        if os.path.exists(self.fake_fs_data):
+            shutil.rmtree(self.fake_fs_data, ignore_errors=True)
 
     def container_running(self) -> bool:
         return self.cowrie_container is not None
