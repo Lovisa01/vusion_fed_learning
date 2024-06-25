@@ -6,6 +6,7 @@ import threading
 
 from BlueLLMTeam import PromptDict as prompt
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase, ChatGPTEndpoint
+from BlueLLMTeam.Honeypot import AddContents 
 
 def generate_random_id(length=10):
     """Generate a random id of a given length."""
@@ -13,15 +14,10 @@ def generate_random_id(length=10):
     return ''.join(random.choice(letters) for _ in range(length))
 
 
-def generate_file_contents(file_path, file_name, folder_name, prompt_dict: dict[str, str], llm_endpoint):
+def generate_file_contents(file_path):
     """Create a random text file."""
     try:
-        with open(file_path, 'w') as file:
-            python_suggestion = prompt.python_advisor(file_path)
-            advisor_response = llm_endpoint.ask(python_suggestion)
-            python_code = prompt.python_coder(advisor_response.content)
-            file_response = llm_endpoint.ask(python_code)
-            file.write(file_response.content)
+        AddContents.create_file_content(file_path)
     except Exception as e:
         print(f"Failed to create file at {file_path}. Error: {e}")
 
@@ -90,14 +86,14 @@ def generate_file_system(local_fs: Path, current_folder: str, honey_context: str
             local_file_path = local_fs / file_path.lstrip("/")
 
             # Temp solution
-            t = threading.Thread(target=local_file_path.touch)
+            # t = threading.Thread(target=local_file_path.touch)
             # Generate file contents
-            # kwargs = {
-            #     "file_path": file_path,
-            #     "honey_context": honey_context,
-            #     "llm": llm,
-            # }
-            # t = threading.Thread(target=generate_file_contents, kwargs=kwargs)
+            kwargs = {
+                "file_path": str(local_file_path),
+                #"honey_context": honey_context,
+                #"llm": llm,
+            }
+            t = threading.Thread(target=generate_file_contents, kwargs=kwargs)
             threads.append(t)
             
     # Spawn new threads
