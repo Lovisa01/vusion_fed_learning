@@ -310,7 +310,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             max_depth=depth,
         )
 
-        logger.info("Created honeypot filesystem at", self.fake_fs)
+        logger.info(f"Created honeypot filesystem at {self.fake_fs}")
  
         pickledir(self.fake_fs, depth, self.fake_fs_data / "custom.pickle")
 
@@ -322,7 +322,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
 
             shutil.copytree(ROOT_DIR / "Honeypot/_honeyfs/etc", self.fake_fs / "etc")
             shutil.copytree(ROOT_DIR / "Honeypot/_honeyfs/proc", self.fake_fs / "proc")
-            logger.info(f"Folder successfully copied.")
+            logger.info("Folder successfully copied.")
         
         except Exception as e:
             logger.error(f"An error occurred when copying honeyfs: {str(e)}")
@@ -352,7 +352,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                     self.fake_fs: {"bind": "/cowrie/cowrie-git/honeyfs/", "mode": "rw"}
                     },
             )
-            logger.info("Successfully created Cowrie container ID: ", self.cowrie_container.id)
+            logger.info(f"Successfully created Cowrie container ID: {self.cowrie_container.id}")
 
         except docker.errors.APIError as e:
             logger.error(f"Failed to create Cowrie container. Error: {e}")
