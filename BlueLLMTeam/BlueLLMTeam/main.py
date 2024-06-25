@@ -1,12 +1,20 @@
 import json
 import time
+import threading
+import logging
 
+from tqdm import tqdm
 from argparse import ArgumentParser
 from dataclasses import dataclass
 
-from BlueLLMTeam.RoleAgent import TeamLeaderRole, CowrieAnalystRole, CowrieDesignerRole
+from BlueLLMTeam.RoleAgent import TeamLeaderRole, CowrieDesignerRole
 from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
-from BlueLLMTeam.banner import TEAM_BANNER, LLM_DESIGNER, LLM_ANALYST
+from BlueLLMTeam.banner import TEAM_BANNER, LLM_DESIGNER, LLM_TEAM_LEAD
+from BlueLLMTeam.monitor import monitor_logs, update_logs
+from BlueLLMTeam.utils import verify_docker_installation
+
+
+designers: list[CowrieDesignerRole] = []
 
 
 @dataclass
@@ -14,6 +22,7 @@ class Arguments:
     context_file: str
     verbosity: int
     frequency: float
+    yes: bool
 
     @classmethod
     def from_cli(cls):
@@ -24,12 +33,14 @@ class Arguments:
         parser.add_argument("--context", "-c", help="JSON data with the job description")
         parser.add_argument("--verbose", "-v", action="count", default=0, help="Increase verbosity level")
         parser.add_argument("--frequency", "-f", type=float, default=1, help="Update frequency of the analyst")
+        parser.add_argument("--yes", "-y", action="store_true", help="Skip all confirmations and allow all actions")
         
         args = parser.parse_args()
         return cls(
             context_file=args.context,
             verbosity=args.verbose,
             frequency=args.frequency,
+            yes=args.yes,
         )
     
     @property
@@ -43,12 +54,50 @@ class Arguments:
         return s
 
 
+def quit():
+    # Cleanup designers
+    for designer in designers:
+        designer.stop()
+
+
+def happy_with_llm_decision(prompt: str, yes: bool = False) -> bool:
+    if yes:
+        return True
+    
+    # Prompt until yes or no answer
+    while True:
+        a = input(f"{prompt} (y/n/r): ").lower()
+        if a in ["y", "n", "r"]:
+            break
+        print(f"{a} is not a valid input. Only (y)es, (n)o, or (r)etry are valid")
+    
+    if a == "y":
+        return True
+    if a == "r":
+        return False
+    # Quit the application
+    exit()
+
+
 def main():
     # Greeting
     print(TEAM_BANNER)
+    print("\nChecking system...")
 
     # Parse CLI arguments
     args = Arguments.from_cli()
+
+    log_level = logging.WARNING
+    if args.verbosity == 1:
+        log_level = logging.INFO
+    elif args.verbosity > 1:
+        log_level = logging.DEBUG
+    logging.basicConfig(level=log_level)
+
+    # Verify docker
+    if not verify_docker_installation():
+        print("Failed to verify the docker installation...")
+        return
 
     if args.verbose:
         print("\nRunning with the following arguments:")
@@ -68,60 +117,73 @@ def main():
     if args.verbose:
         print("\nJob information:")
         print(context)
-
-    if not input("Deploy honeypots (y/n): ").lower() == "y":
-        print("Stopping deployment...")
-        return
     
-    # Create agents
+    # Create LLM endpoint and team leader
     llm_endpoint = ChatGPTEndpoint()
-    designer = CowrieDesignerRole(llm_endpoint)
-    analyst = CowrieAnalystRole(llm_endpoint)
+    team_lead = TeamLeaderRole(llm_endpoint)
 
-    # Design and deploy honeypot
-    print(LLM_DESIGNER)
-    print("Createing custom file system for honeypot...")
-    designer.create_honeypot(json.dumps(context, indent=4))
-    print("Deploying honeypot...")
-    designer.deploy_honeypot()
-    print("Waiting for container startup (20 seconds, temporarily hardcoded)")
-    time.sleep(20)
+    # Decide on honeypots
+    print(LLM_TEAM_LEAD)
+    while True:
+        print("\nThinking about what honeypots to deploy...")
+        honeypot_count = team_lead.honeypot_amount(context)
+        
+        print("Team Lead wants to deploy the following honeypots: ")
+        for honeypot_type, count in honeypot_count.items():
+            print(f"- {honeypot_type}: {count}")
+
+        if happy_with_llm_decision("Generate descriptions for all honeypots", args.yes):
+            break
     
-    # Monitor attacker
-    print(LLM_ANALYST)
-    print("Ready to analyse attackers. Waiting for connections...")
-    try:
-        while True:
-            start_time = time.time_ns()
-            
-            logs = designer.get_logs()
-            if logs:
-                print("\nNew interaction with the honeypot")
-                print("##### Analyzing the following logs #####")
-                print(logs)
-                print("########################################")
-                print("\nThinking...")
-                response = analyst.analyse_logs(logs).content
-                print("##### Analyst result #####")
-                print(response)
-                print("##########################")
-                print("Waiting for more interactions...")
+    # Create honeypot descriptions
+    while True:
+        honeypot_descriptions = team_lead.honeypot_design(context, honeypot_count)
 
-            # Sleep until next loop
-            exec_time = (time.time_ns() - start_time) / 1e9
-            sleep_time = 1 / args.frequency - exec_time
-            
-            if sleep_time > 0:
-                if args.verbosity > 3:
-                    print(f"Sleeping for {sleep_time} seconds")
-                time.sleep(sleep_time)
-    except KeyboardInterrupt:
-        pass
+        print("Team Lead wants to deploy the following honeypots: ")
+        for honeypot_description in honeypot_descriptions:
+            print("#" * 30)
+            print(f"name: {honeypot_description['name']}")
+            print(f"type: {honeypot_description['type']}")
+            print(f"description: {honeypot_description['description']}")
+        print("#" * 30)
+        
+        if happy_with_llm_decision("Create honeypots according to the descriptions", args.yes):
+            break
+
+    # Design the contents of all honeypots
+    print(LLM_DESIGNER)
+    while True:
+        print("Creating custom contents for all requested honeypots...")
+        for honeypot_description in tqdm(honeypot_descriptions):
+            designer = CowrieDesignerRole(llm_endpoint)
+            designers.append(designer)
+            designer.create_honeypot(honeypot_description["description"])
+        
+        if happy_with_llm_decision("Deploy honeypots according to the descriptions", args.yes):
+            break
+    
+    print("Deploying honeypots...")
+    for designer in tqdm(designers):
+        designer.deploy_honeypot()
+    
+    # Watch logs in a separate thread
+    kwargs = {
+        "frequency": args.frequency,
+        "designers": designers,
+        "verbosity": args.verbosity,
+    }
+    update_logs_thread = threading.Thread(target=update_logs, kwargs=kwargs)
+    update_logs_thread.start()
+
+    # Monitor attacker
+    monitor_logs(args.frequency, args.verbosity)
 
     print("Stopping execution")
-    print("Removing containers and temp files")
-    designer.stop()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        print("Cleanup of containers and temporary files...")
+        quit()

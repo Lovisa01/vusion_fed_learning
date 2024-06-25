@@ -1,6 +1,6 @@
 {
     "TeamLeader": {
-        "System": "You are the TeamLeader of a blue team in cybersecurity"
+        "System": "You are an expert cybersecurity team leader."
     },
     "Analyst": {
         "System": "You are a behavior analyst for hackers"
