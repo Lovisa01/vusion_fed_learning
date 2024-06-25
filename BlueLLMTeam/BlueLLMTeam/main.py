@@ -33,7 +33,7 @@ class Arguments:
         parser.add_argument("--context", "-c", help="JSON data with the job description")
         parser.add_argument("--verbose", "-v", action="count", default=0, help="Increase verbosity level")
         parser.add_argument("--frequency", "-f", type=float, default=1, help="Update frequency of the analyst")
-        parser.add_argument("--yes", "-y", action="store_true", help="Skip all yes prompts")
+        parser.add_argument("--yes", "-y", action="store_true", help="Skip all confirmations and allow all actions")
         
         args = parser.parse_args()
         return cls(
