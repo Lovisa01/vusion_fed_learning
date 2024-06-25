@@ -3,6 +3,7 @@ import random
 import string
 import sys
 from BlueLLMTeam import PromptDict as prompt
+from BlueLLMTeam.Honeypot import AddContents 
 
 def generate_random_id(length=10):
     """Generate a random id of a given length."""
@@ -10,15 +11,14 @@ def generate_random_id(length=10):
     return ''.join(random.choice(letters) for _ in range(length))
 
 
+def generate_file_contents(file_path):
+    """Create a random text file."""
+    AddContents.create_file_content(file_path)
+
 def create_random_file(file_path, file_name, folder_name, prompt_dict: dict[str, str], llm_endpoint):
     """Create a random text file."""
     try:
-        with open(file_path, 'w') as file:
-            python_suggestion = prompt.python_advisor(file_path)
-            advisor_response = llm_endpoint.ask(python_suggestion)
-            python_code = prompt.python_coder(advisor_response.content)
-            file_response = llm_endpoint.ask(python_code)
-            file.write(file_response.content)
+        AddContents.create_file_content(file_path)
     except Exception as e:
         print(f"Failed to create file at {file_path}. Error: {e}")
 
