@@ -70,7 +70,6 @@ def create_file_content(file_path):
                 while x <20: 
                     csv_append = prompt.csv_appender(csv_header_response.content, csv_first_rows_response.content)
                     csv_append_response = llm_endpoint.ask(csv_append)
-                    print(csv_append_response.content)
                     file.write(csv_append_response.content)
                     x+=1
         except Exception as e:
@@ -78,14 +77,11 @@ def create_file_content(file_path):
     else:
         try:
             with open(file_path, 'w') as file:
-                print("OPENING FILE")
                 #Get advice from what we need to write in the text file based on the current working directory.
                 text_suggestion = prompt.text_file_advisor(file_path)
-                print(text_suggestion)
                 advisor_response = llm_endpoint.ask(text_suggestion)
                 #Take the advice and provide a aseries of questions for the writer to write about.
                 text_file = prompt.text_file_writer(advisor_response.content)
-                print(text_file)
                 file_response = llm_endpoint.ask(text_file)
                 file.write(file_response.content)
         except Exception as e:
