@@ -1,6 +1,7 @@
 import os
 import requests
 import logging
+import json
 
 from dotenv import load_dotenv
 
@@ -20,7 +21,11 @@ def add_log(log_record: dict) -> bool:
     Add a log record to the database
     """
     url = f"http://{BACKEND_IP}:{BACKEND_PORT}{LOGS_ENDPOINT}"
-    response = requests.post(url, data=log_record)
+    data = json.dumps(log_record)
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    response = requests.post(url, data=data, headers=headers)
     return response.ok
 
 

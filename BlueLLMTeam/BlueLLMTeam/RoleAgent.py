@@ -283,7 +283,7 @@ class HoneypotDesignerRole(AgentRoleBase):
 
     def stop(self):
         if self.port is not None:
-            self.used_ports.remove(self.port)
+            self.used_ports.discard(self.port)
 
 
 class CowrieDesignerRole(HoneypotDesignerRole):
@@ -417,7 +417,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             self.cowrie_container.stop()
             self.cowrie_container.remove()
             self.cowrie_container = None
-        shutil.rmtree(self.fake_fs_data)
+        shutil.rmtree(self.fake_fs_data, ignore_errors=True)
 
     def container_running(self) -> bool:
         return self.cowrie_container is not None
