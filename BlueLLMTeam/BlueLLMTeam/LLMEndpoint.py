@@ -7,6 +7,8 @@ from abc import ABC, abstractmethod
 from typing import Dict
 from dotenv import load_dotenv
 import ollama
+
+from BlueLLMTeam import data_promts_endpoint
 # YOU WILL HAVE TO LOAD FROM YOUR ENVINVORNMENT FILE
 # Load environment variables from the .env file
 load_dotenv()
@@ -62,6 +64,8 @@ class ChatGPTEndpoint(LLMEndpointBase):
                 messages=inputmessages,
                 max_tokens=prompt_dict.get("max_tokens",2048),
             )
+            data_promts_endpoint.send_json(data_dict=prompt_dict, outputContent=response.choices[0].message.content)
+            print(response.choices[0].message)
             return response.choices[0].message
         except Exception as e:
             print(f"An error occurred: {e}")
