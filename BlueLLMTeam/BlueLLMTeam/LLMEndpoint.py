@@ -7,6 +7,8 @@ from abc import ABC, abstractmethod
 from typing import Dict
 from dotenv import load_dotenv
 import ollama
+import threading
+from random import choice
 # YOU WILL HAVE TO LOAD FROM YOUR ENVINVORNMENT FILE
 # Load environment variables from the .env file
 load_dotenv()
@@ -48,6 +50,15 @@ class EchoEndpoint(LLMEndpointBase):
 
 class ChatGPTEndpoint(LLMEndpointBase):
 
+    def __init__(self, request_limit: int = 16, token_limit: int = 2048) -> None:
+        super().__init__()
+        self.request_limit = request_limit
+        self.token_limit = token_limit
+        self.locks = [threading.Lock() for _ in range(self.request_limit)]
+
+    def get_random_lock(self):
+        return choice(self.locks)
+
     def ask(self, prompt_dict: Dict[str, str]):
         try:
             # Create a prompt from the prompt_dict
@@ -57,11 +68,13 @@ class ChatGPTEndpoint(LLMEndpointBase):
             ]
 
             # Make a request to the OpenAI API
-            response = client.chat.completions.create(
-                model=prompt_dict.get("model", "gpt-3.5-turbo"),  # Specify the model you want to use
-                messages=inputmessages,
-                max_tokens=prompt_dict.get("max_tokens",2048),
-            )
+            token_limit = min(self.token_limit, prompt_dict.get("max_tokens", self.token_limit))
+            with self.get_random_lock():
+                response = client.chat.completions.create(
+                    model=prompt_dict.get("model", "gpt-3.5-turbo"),  # Specify the model you want to use
+                    messages=inputmessages,
+                    max_tokens=token_limit,
+                )
             return response.choices[0].message
         except Exception as e:
             print(f"An error occurred: {e}")

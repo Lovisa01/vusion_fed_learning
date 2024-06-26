@@ -16,8 +16,6 @@ llm_endpoint = ChatGPTEndpoint()
 
 
 def create_file_content(file_path):
-    print("the file path is here:")
-    print(file_path)
     # Get the file extension
     _, file_extension = os.path.splitext(file_path)
 
@@ -27,7 +25,6 @@ def create_file_content(file_path):
             with open(file_path, 'w') as file:
                 #Ask the advisor what they think the python file should be based on within the current directory.
                 python_suggestion = prompt.python_advisor(file_path)
-                print(python_suggestion)
                 advisor_response = llm_endpoint.ask(python_suggestion)
                 #Gain insight from the advisor to produce the first set of code
                 python_code = prompt.python_coder(advisor_response.content)
@@ -86,5 +83,3 @@ def create_file_content(file_path):
                 file.write(file_response.content)
         except Exception as e:
             print(f"Failed to add content to the file at {file_path}. Error: {e}")
-
-
