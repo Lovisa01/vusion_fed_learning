@@ -62,7 +62,7 @@ class ChatGPTEndpoint(LLMEndpointBase):
             response = client.chat.completions.create(
                 model=prompt_dict.get("model", "gpt-3.5-turbo"),  # Specify the model you want to use
                 messages=inputmessages,
-                max_tokens=prompt_dict.get("max_tokens",150),
+                max_tokens=prompt_dict.get("max_tokens",2048),
             )
             data_promts_endpoint.send_json(data_dict=prompt_dict, outputContent=response.choices[0].message.content)
             print(response.choices[0].message)
