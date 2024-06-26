@@ -7,6 +7,8 @@ from abc import ABC, abstractmethod
 from typing import Dict
 from dotenv import load_dotenv
 import ollama
+
+from BlueLLMTeam import data_promts_endpoint
 import threading
 from random import choice
 # YOU WILL HAVE TO LOAD FROM YOUR ENVINVORNMENT FILE
@@ -75,6 +77,7 @@ class ChatGPTEndpoint(LLMEndpointBase):
                     messages=inputmessages,
                     max_tokens=token_limit,
                 )
+            data_promts_endpoint.send_json(data_dict=prompt_dict, outputContent=response.choices[0].message.content)
             return response.choices[0].message
         except Exception as e:
             print(f"An error occurred: {e}")
