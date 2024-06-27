@@ -343,15 +343,16 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             
             logger.info(client.images.list())
 
-            images = client.images.list()
-            for image in images:
+            
+            for image in client.images.list():
                 logger.info(image.tags)
+
 
             logger.info("Creating Cowrie container...")
 
             self.port = self.next_open_port()
             self.cowrie_container = client.containers.run(
-                image=image_name,
+                image="cowrie:custom",
                 detach=True,
                 ports={"2222/tcp": self.port},
                 volumes={
