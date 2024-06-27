@@ -29,6 +29,8 @@ AVAILABLE_HONEYPOTS = {
 HONEYPOT_RESOURCES = "\n".join(f"- {honeypot}: {description}" for honeypot, description in AVAILABLE_HONEYPOTS.items())
 EXAMPLE_OUTPUT = "\n".join(f"- {honeypot}: {randint(0, 5)}" for honeypot in AVAILABLE_HONEYPOTS.keys())
 
+DEFAULT_PORT = os.environ.get("DEFAULT_PORT", 2222)
+
 
 class AgentRoleBase(ABC):
     """
@@ -272,7 +274,7 @@ class HoneypotDesignerRole(AgentRoleBase):
         Deploy a already created honeypot
         """
 
-    def next_open_port(cls, start_port: int = 2222) -> int:
+    def next_open_port(cls, start_port: int = DEFAULT_PORT) -> int:
         """
         Return the next open port, starting from start_port
         """
@@ -334,25 +336,18 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             raise ValueError("Cowrie container already deployed")
 
         client = docker.from_env()
-        image_name = "cowrie/cowrie:latest"
+        image_name = os.environ.get("COWRIE_IMAGE", "cowrie/cowrie:latest")
         try:
-            logger.info("Pulling Cowrie image...")
-            client.images.pull(image_name)
-            logger.info("Successfully pulled Cowrie image.")
-            logger.info("Listing Cowrie images...")
+            if not client.images.list(name=image_name):
+                logger.info(f"Pulling Cowrie image {image_name}...")
+                client.images.pull(image_name)
+                logger.info("Successfully pulled Cowrie image.")
             
-            logger.info(client.images.list())
-
-            
-            for image in client.images.list():
-                logger.info(image.tags)
-
-
-            logger.info("Creating Cowrie container...")
+            logger.info(f"Creating Cowrie container from image {image_name}...")
 
             self.port = self.next_open_port()
             self.cowrie_container = client.containers.run(
-                image="cowrie:custom",
+                image=image_name,
                 detach=True,
                 ports={"2222/tcp": self.port},
                 volumes={
