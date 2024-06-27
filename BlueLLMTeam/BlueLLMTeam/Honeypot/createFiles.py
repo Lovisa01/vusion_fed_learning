@@ -3,10 +3,15 @@ import random
 import string
 from pathlib import Path
 import threading
+import logging
 
 from BlueLLMTeam import PromptDict as prompt
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase, ChatGPTEndpoint
-from BlueLLMTeam.Honeypot import AddContents 
+from BlueLLMTeam.Honeypot import AddContents
+
+
+logger = logging.getLogger(__name__)
+
 
 def generate_random_id(length=10):
     """Generate a random id of a given length."""
@@ -14,12 +19,26 @@ def generate_random_id(length=10):
     return ''.join(random.choice(letters) for _ in range(length))
 
 
-def generate_file_contents(file_path):
-    """Create a random text file."""
+def generate_file_contents(local_fs: Path, file_path: str, llm: LLMEndpointBase):
+    """
+    Create a file for the fake file system
+    """
+    local_file_path = local_fs / file_path.lstrip("/")
+    
+    # Generate file contents
     try:
-        AddContents.create_file_content(file_path)
+        contents = AddContents.create_file_contents(file_path, llm)
     except Exception as e:
-        print(f"Failed to create file at {file_path}. Error: {e}")
+        logger.warning(f"Failed to generate file contents for {file_path}. Error: {e}")
+        return
+    
+    # Write contents to the file
+    try:
+        with open(local_file_path, "w") as f:
+            f.write(contents)
+    except Exception as e:
+        logger.warning(f"Failed to write file contents for {local_file_path}. Error: {e}")
+        return
 
 
 def generate_file_system(local_fs: Path, current_folder: str, honey_context: str, llm: LLMEndpointBase, depth: int = 0, max_depth: int = 5):
@@ -83,15 +102,11 @@ def generate_file_system(local_fs: Path, current_folder: str, honey_context: str
             threads.append(t)
         else:
             file_path = os.path.join(current_folder, folder_content)
-            local_file_path = local_fs / file_path.lstrip("/")
-
-            # Temp solution
-            # t = threading.Thread(target=local_file_path.touch)
             # Generate file contents
             kwargs = {
-                "file_path": str(local_file_path),
-                #"honey_context": honey_context,
-                #"llm": llm,
+                "local_fs": local_fs,
+                "file_path": file_path,
+                "llm": llm,
             }
             t = threading.Thread(target=generate_file_contents, kwargs=kwargs)
             threads.append(t)
