@@ -343,6 +343,10 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             
             logger.info(client.images.list())
 
+            images = client.images.list()
+            for image in images:
+                logger.info(image.tags)
+
             logger.info("Creating Cowrie container...")
 
             self.port = self.next_open_port()
