@@ -339,6 +339,9 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             logger.info("Pulling Cowrie image...")
             client.images.pull(image_name)
             logger.info("Successfully pulled Cowrie image.")
+            logger.info("Listing Cowrie images...")
+            
+            logger.info(client.images.list())
 
             logger.info("Creating Cowrie container...")
 
