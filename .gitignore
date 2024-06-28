@@ -10,3 +10,4 @@ FrankTesting/
 __pycache__/
 tmpfs/
 .DS_Store
+.vscode/

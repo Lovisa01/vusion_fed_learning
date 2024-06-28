@@ -1,14 +1,18 @@
 #DECLARE ALL IMPORTS HERE.
 #BEFORE RUNNING CHECK REQUIREMENTES ARE INSTALLED THANKS!
 from abc import ABC, abstractmethod
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 import os
 from abc import ABC, abstractmethod
-from typing import Dict
 from dotenv import load_dotenv
 import ollama
+import logging
+import time
+import random
 
 from BlueLLMTeam import data_promts_endpoint
+import threading
+from random import choice
 # YOU WILL HAVE TO LOAD FROM YOUR ENVINVORNMENT FILE
 # Load environment variables from the .env file
 load_dotenv()
@@ -18,10 +22,17 @@ client = OpenAI(
     api_key=os.getenv('GPT_KEY')
 )
 
+logger = logging.getLogger(__name__)
+
+MAX_TIME_BETWEEN_RETRIES = float(os.getenv("MAX_TIME_BETWEEN_RETRIES", 2.0))
+MAX_CHATGPT_REQUESTS = int(os.getenv("MAX_CHATGPT_REQUESTS", 16))
+MAX_CHATGPT_TOKENS = int(os.getenv("MAX_CHATGPT_TOKENS", 2048))
+
+
 class LLMEndpointBase(ABC):
 
     @abstractmethod
-    def ask(self, prompt_dict: Dict[str, str]) -> str:
+    def ask(self, prompt_dict: dict[str, str]) -> str:
         """
         Ask the LLM endpoint something
 
@@ -50,7 +61,16 @@ class EchoEndpoint(LLMEndpointBase):
 
 class ChatGPTEndpoint(LLMEndpointBase):
 
-    def ask(self, prompt_dict: Dict[str, str]):
+    def __init__(self, request_limit: int = MAX_CHATGPT_REQUESTS, token_limit: int = MAX_CHATGPT_TOKENS) -> None:
+        super().__init__()
+        self.request_limit = request_limit
+        self.token_limit = token_limit
+        self.locks = [threading.Lock() for _ in range(self.request_limit)]
+
+    def get_random_lock(self):
+        return choice(self.locks)
+
+    def ask(self, prompt_dict: dict[str, str], max_retries: int = 3, retry: int = 0):
         try:
             # Create a prompt from the prompt_dict
             inputmessages = [
@@ -59,17 +79,24 @@ class ChatGPTEndpoint(LLMEndpointBase):
             ]
 
             # Make a request to the OpenAI API
-            response = client.chat.completions.create(
-                model=prompt_dict.get("model", "gpt-3.5-turbo"),  # Specify the model you want to use
-                messages=inputmessages,
-                max_tokens=prompt_dict.get("max_tokens",2048),
-            )
+            token_limit = min(self.token_limit, prompt_dict.get("max_tokens", self.token_limit))
+            with self.get_random_lock():
+                response = client.chat.completions.create(
+                    model=prompt_dict.get("model", "gpt-3.5-turbo"),  # Specify the model you want to use
+                    messages=inputmessages,
+                    max_tokens=token_limit,
+                )
             data_promts_endpoint.send_json(data_dict=prompt_dict, outputContent=response.choices[0].message.content)
-            print(response.choices[0].message)
             return response.choices[0].message
+        except RateLimitError as e:
+            logger.warning(f"Rate limit exceeded. Will try {max_retries - retry} more times: {e.message}")
+            if retry >= max_retries:
+                raise
+            time.sleep(random.random() * MAX_TIME_BETWEEN_RETRIES)
+            return self.ask(prompt_dict=prompt_dict, max_retries=max_retries, retry=retry + 1)
         except Exception as e:
-            print(f"An error occurred: {e}")
-            return None
+            print(f"An error occurred when querying ChatGPT: {e}")
+            raise
 
 
 class Llama2Endpoint(LLMEndpointBase):
@@ -79,7 +106,7 @@ class Llama2Endpoint(LLMEndpointBase):
         self.host = host
         self.client = ollama.Client(self.host)
     
-    def ask(self, prompt_dict: Dict[str, str]) -> str:
+    def ask(self, prompt_dict: dict[str, str]) -> str:
         try:
             # Create a prompt from the prompt_dict
             inputmessages = [
@@ -95,4 +122,4 @@ class Llama2Endpoint(LLMEndpointBase):
             return response["message"]["content"]
         except Exception as e:
             print(f"An error occurred: {e}")
-            return None
+            raise
