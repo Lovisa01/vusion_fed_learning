@@ -129,7 +129,10 @@ def main():
     print(LLM_TEAM_LEAD)
     while True:
         print("\nThinking about what honeypots to deploy...")
-        honeypot_count = team_lead.honeypot_amount(context)
+        # honeypot_count = team_lead.honeypot_amount(context)
+        honeypot_count = {
+            "cowrie": 1,
+        }
         
         print("Team Lead wants to deploy the following honeypots: ")
         for honeypot_type, count in honeypot_count.items():
