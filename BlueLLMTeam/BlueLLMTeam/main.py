@@ -172,15 +172,6 @@ def main():
     for designer in tqdm(designers):
         designer.deploy_honeypot()
     
-    # Watch logs in a separate thread
-    kwargs = {
-        "frequency": args.frequency,
-        "designers": designers,
-        "verbosity": args.verbosity,
-    }
-    update_logs_thread = threading.Thread(target=update_logs, kwargs=kwargs)
-    update_logs_thread.start()
-
     # Monitor attacker
     monitor_logs(args.frequency, args.verbosity)
 
