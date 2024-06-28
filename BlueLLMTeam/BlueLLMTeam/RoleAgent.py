@@ -360,7 +360,10 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                 volumes={
                     self.fake_fs_data / "custom.pickle": {"bind": "/cowrie/cowrie-git/share/cowrie/fs.pickle", "mode": "rw"},
                     self.fake_fs: {"bind": "/cowrie/cowrie-git/honeyfs/", "mode": "rw"}
-                    },
+                },
+                environment={
+                    "HONEYPOT_NAME": "cowrie-prod"
+                },
             )
             logger.info(f"Successfully created Cowrie container ID: {self.cowrie_container.id}")
 
@@ -377,52 +380,6 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         while self.cowrie_container.status != "running":
             time.sleep(1)
             self.cowrie_container.reload()
-
-    def update_logs(self) -> str:
-        # Check that the container is deployed
-        if self.cowrie_container is None:
-            raise ValueError("Cowrie container has not been deployed")
-
-        # Cowrie log location
-        cowrie_log = f"/cowrie/cowrie-git/var/log/cowrie/cowrie.json"
-        tmp_log = f"/tmp/{self.cowrie_container.id}-cowrie.json"
-
-        # Copy file from container to local filesystem
-        docker_cp = ["docker", "cp", f"{self.cowrie_container.id}:{cowrie_log}", tmp_log]
-        res = subprocess.run(docker_cp, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-
-        # Raise error if command failed
-        if res.returncode != 0:
-            logger.warning("Failed to copy logs from the docker container")
-            return
-
-        # Read file contents into the logs array
-        with open(tmp_log, "r") as f:
-            # One json record for each line
-            for record in f:
-                log = json.loads(record)
-                if log.get("eventid") == "cowrie.command.input":
-                    # Create a hash of the log (a sorted string)
-                    log_hash = json.dumps(log, sort_keys=True)
-                    # Only send log to database if it has not already been sent
-                    if log_hash not in self.old_logs:
-                        self.old_logs.add(log_hash)
-                        self.logs_updated = True
-                        # Send to database
-                        data = {
-                            "src_ip": log["src_ip"],
-                            "session_id": log["session"],
-                            "time_stamp": log["timestamp"],
-                            "input_cmd": log["input"],
-                            "honeypot_name": "cowrie",
-                            "response_cmd": "",
-                        }
-                    
-                        if not add_log(data):
-                            logger.warning("Failed to add data to the database")
-        # Remove tmp file
-        if os.path.exists(tmp_log):
-            os.remove(tmp_log)
 
     def stop(self):
         super().stop()
