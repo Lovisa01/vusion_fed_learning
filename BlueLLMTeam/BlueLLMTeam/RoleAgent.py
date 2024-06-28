@@ -336,9 +336,14 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             raise ValueError("Cowrie container already deployed")
 
         client = docker.from_env()
-        image_name = os.environ.get("COWRIE_IMAGE", "cowrie/cowrie:latest")
+        image_name = os.environ.get("COWRIE_IMAGE")
         try:
             if not client.images.list(name=image_name):
+                if image_name is None:
+                    logger.warning("COWRIE_IMAGE environment variable not set. Using default cowrie image.")
+                else:
+                    logger.warning(f"Cowrie image {image_name} not found. Using default cowrie image.")
+                image_name = "cowrie/cowrie:latest"
                 logger.info(f"Pulling Cowrie image {image_name}...")
                 client.images.pull(image_name)
                 logger.info("Successfully pulled Cowrie image.")
