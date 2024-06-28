@@ -29,6 +29,8 @@ AVAILABLE_HONEYPOTS = {
 HONEYPOT_RESOURCES = "\n".join(f"- {honeypot}: {description}" for honeypot, description in AVAILABLE_HONEYPOTS.items())
 EXAMPLE_OUTPUT = "\n".join(f"- {honeypot}: {randint(0, 5)}" for honeypot in AVAILABLE_HONEYPOTS.keys())
 
+DEFAULT_PORT = os.environ.get("DEFAULT_PORT", 2222)
+
 
 class AgentRoleBase(ABC):
     """
@@ -272,7 +274,7 @@ class HoneypotDesignerRole(AgentRoleBase):
         Deploy a already created honeypot
         """
 
-    def next_open_port(cls, start_port: int = 2222) -> int:
+    def next_open_port(cls, start_port: int = DEFAULT_PORT) -> int:
         """
         Return the next open port, starting from start_port
         """
@@ -340,13 +342,15 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             raise ValueError("Cowrie container already deployed")
 
         client = docker.from_env()
-        image_name = "cowrie/cowrie:latest"
+        image_name = os.environ.get("COWRIE_IMAGE")
+        if image_name is None:
+            logger.warning("COWRIE_IMAGE environment variable not set. Using default cowrie image.")
+            image_name = "cowrie/cowrie:latest"
         try:
-            logger.info("Pulling Cowrie image...")
-            client.images.pull(image_name)
-            logger.info("Successfully pulled Cowrie image.")
-
-            logger.info("Creating Cowrie container...")
+            if not client.images.list(name=image_name):
+                raise docker.errors.ImageNotFound(f"Image {image_name} not found.")
+            
+            logger.info(f"Creating Cowrie container from image {image_name}...")
 
             self.port = self.next_open_port()
             self.cowrie_container = client.containers.run(
@@ -364,7 +368,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             logger.error(f"Failed to create Cowrie container. Error: {e}")
             raise
         except docker.errors.ImageNotFound as e:
-            logger.error(f"Failed to pull Cowrie image. Error: {e}")
+            logger.error(f"Could not find Cowrie image. Error: {e}")
             raise
         except Exception as e:
             logger.error(f"An error occurred when deploying Cowrie container. Error: {e}")
