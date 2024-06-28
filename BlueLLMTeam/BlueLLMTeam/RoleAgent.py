@@ -337,16 +337,12 @@ class CowrieDesignerRole(HoneypotDesignerRole):
 
         client = docker.from_env()
         image_name = os.environ.get("COWRIE_IMAGE")
+        if image_name is None:
+            logger.warning("COWRIE_IMAGE environment variable not set. Using default cowrie image.")
+            image_name = "cowrie/cowrie:latest"
         try:
             if not client.images.list(name=image_name):
-                if image_name is None:
-                    logger.warning("COWRIE_IMAGE environment variable not set. Using default cowrie image.")
-                else:
-                    logger.warning(f"Cowrie image {image_name} not found. Using default cowrie image.")
-                image_name = "cowrie/cowrie:latest"
-                logger.info(f"Pulling Cowrie image {image_name}...")
-                client.images.pull(image_name)
-                logger.info("Successfully pulled Cowrie image.")
+                raise docker.errors.ImageNotFound(f"Image {image_name} not found.")
             
             logger.info(f"Creating Cowrie container from image {image_name}...")
 
@@ -366,7 +362,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             logger.error(f"Failed to create Cowrie container. Error: {e}")
             raise
         except docker.errors.ImageNotFound as e:
-            logger.error(f"Failed to pull Cowrie image. Error: {e}")
+            logger.error(f"Could not find Cowrie image. Error: {e}")
             raise
         except Exception as e:
             logger.error(f"An error occurred when deploying Cowrie container. Error: {e}")
