@@ -301,9 +301,8 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         self.old_logs = set()
         self.logs_updated = False
 
-    def create_honeypot(self, honeypot_description: str, depth: int = 3) -> str:
+    def create_honeypot(self, honeypot_description: str, depth: int = 3, light_weight: bool = False) -> str:
         files = generate_file_system(
-            local_fs=self.fake_fs,
             current_folder="/home",
             honey_context=honeypot_description,
             llm=self.llm,
@@ -314,6 +313,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             files=files,
             honey_context=honeypot_description,
             llm=self.llm,
+            light_weight=light_weight,
         )
 
         logger.info(f"Created honeypot filesystem at {self.fake_fs}")

@@ -23,6 +23,7 @@ class Arguments:
     verbosity: int
     frequency: float
     yes: bool
+    light_weight: bool
 
     @classmethod
     def from_cli(cls):
@@ -34,6 +35,7 @@ class Arguments:
         parser.add_argument("--verbose", "-v", action="count", default=0, help="Increase verbosity level")
         parser.add_argument("--frequency", "-f", type=float, default=1, help="Update frequency of the analyst")
         parser.add_argument("--yes", "-y", action="store_true", help="Skip all confirmations and allow all actions")
+        parser.add_argument("--light-weight", "-l", action="store_true", help="Create a light weight file system without any file contents")
         
         args = parser.parse_args()
         return cls(
@@ -41,6 +43,7 @@ class Arguments:
             verbosity=args.verbose,
             frequency=args.frequency,
             yes=args.yes,
+            light_weight=args.light_weight,
         )
     
     @property
@@ -157,7 +160,7 @@ def main():
         for honeypot_description in tqdm(honeypot_descriptions):
             designer = CowrieDesignerRole(llm_endpoint)
             designers.append(designer)
-            designer.create_honeypot(honeypot_description["description"])
+            designer.create_honeypot(honeypot_description["description"], light_weight=args.light_weight)
         
         if happy_with_llm_decision("Deploy honeypots according to the descriptions", args.yes):
             break
