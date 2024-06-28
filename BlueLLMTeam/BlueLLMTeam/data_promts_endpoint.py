@@ -28,7 +28,7 @@ def send_json(data_dict, outputContent):
 
     try:
         # Send the JSON object to the endpoint
-        response = requests.post(data_prompt_endpoint, json=json_data)
+        response = requests.post(data_prompt_endpoint, json=json_data, timeout=1)
         response.raise_for_status()
 
     except requests.exceptions.HTTPError as errhttp:

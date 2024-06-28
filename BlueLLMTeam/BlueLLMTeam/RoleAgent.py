@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from random import randint
 
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
-from BlueLLMTeam.Honeypot.createFiles import generate_file_system, generate_random_id
+from BlueLLMTeam.Honeypot.createFiles import generate_file_system, generate_random_id, generate_file_contents
 from BlueLLMTeam.Honeypot.createfs import pickledir
 from BlueLLMTeam.utils import extract_json_from_text, extract_markdown_list, replace_tokens
 from BlueLLMTeam.db_interaction import add_log
@@ -302,12 +302,18 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         self.logs_updated = False
 
     def create_honeypot(self, honeypot_description: str, depth: int = 3) -> str:
-        generate_file_system(
+        files = generate_file_system(
             local_fs=self.fake_fs,
             current_folder="/home",
             honey_context=honeypot_description,
             llm=self.llm,
             max_depth=depth,
+        )
+        generate_file_contents(
+            local_fs=self.fake_fs,
+            files=files,
+            honey_context=honeypot_description,
+            llm=self.llm,
         )
 
         logger.info(f"Created honeypot filesystem at {self.fake_fs}")
