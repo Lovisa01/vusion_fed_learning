@@ -11,3 +11,6 @@ __pycache__/
 tmpfs/
 .DS_Store
 .vscode/
+
+# Ignore data
+*.csv
