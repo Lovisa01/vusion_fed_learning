@@ -2,7 +2,7 @@ import time
 import json
 import logging
 
-from BlueLLMTeam.RoleAgent import CowrieAnalystRole, CowrieDesignerRole
+from BlueLLMTeam.agents import CowrieAnalystRole, CowrieDesignerRole
 from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
 from BlueLLMTeam.banner import LLM_ANALYST
 from BlueLLMTeam.db_interaction import get_logs_from_session, update_session_status, get_updated_sessions

@@ -1,16 +1,14 @@
 import json
-import time
-import threading
 import logging
 
 from tqdm import tqdm
 from argparse import ArgumentParser
 from dataclasses import dataclass
 
-from BlueLLMTeam.RoleAgent import TeamLeaderRole, CowrieDesignerRole
+from BlueLLMTeam.agents import TeamLeaderRole, CowrieDesignerRole
 from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
 from BlueLLMTeam.banner import TEAM_BANNER, LLM_DESIGNER, LLM_TEAM_LEAD
-from BlueLLMTeam.monitor import monitor_logs, update_logs
+from BlueLLMTeam.monitor import monitor_logs
 from BlueLLMTeam.utils import verify_docker_installation
 
 
@@ -98,9 +96,9 @@ def main():
     logging.basicConfig(level=log_level)
 
     # Verify docker
-    if not verify_docker_installation():
-        print("Failed to verify the docker installation...")
-        return
+    # if not verify_docker_installation():
+    #     print("Failed to verify the docker installation...")
+    #     return
 
     if args.verbose:
         print("\nRunning with the following arguments:")
