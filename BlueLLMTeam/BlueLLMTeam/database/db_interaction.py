@@ -127,7 +127,11 @@ async def get_all_session_logs(sessions: set[str], pbar: tqdm):
     return pd.DataFrame(data)
     
 
-def fetch_all_session_logs(honeypot_names: list[str] = None, save_local_cache: bool = False) -> pd.DataFrame:
+def fetch_all_session_logs(
+        honeypot_names: list[str] = None, 
+        save_local_cache: bool = False, 
+        split_commands: bool = False
+    ) -> pd.DataFrame:
     sessions = get_all_sessions()
 
     # Load local logs from cache
@@ -146,10 +150,28 @@ def fetch_all_session_logs(honeypot_names: list[str] = None, save_local_cache: b
     else:
         logs = pd.concat([local_cache, new_logs], ignore_index=True)
 
+
     if save_local_cache:
         LOCAL_LOG_DB_CACHE.parent.mkdir(exist_ok=True)
         logs.to_csv(LOCAL_LOG_DB_CACHE, header=True, index=False)
+
+    if split_commands:
+        logs = split_chained_commands(logs)
+
+    # Trim all strings in the database
+    logs = logs.map(lambda x: x.strip() if isinstance(x, str) else x)
     
     if honeypot_names is None:
         return logs
+    
     return logs[logs["honeypot_name"].isin(honeypot_names)]
+
+
+def split_chained_commands(commands: pd.DataFrame) -> pd.DataFrame:
+    """
+    Split chained commands into parts
+    """
+    chain_symbols = ["&&", "||", ";", "|"]
+    regex = "(?:" + "|".join(map(lambda s: s.replace("|", "\|"), chain_symbols)) + ")"
+    expanded_commands = commands["input_cmd"].str.split(regex, regex=True)
+    return commands.assign(input_cmd=expanded_commands).explode("input_cmd", ignore_index=True)

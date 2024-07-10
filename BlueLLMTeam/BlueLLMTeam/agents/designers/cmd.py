@@ -2,10 +2,11 @@ import logging
 from tqdm import trange, tqdm
 from abc import abstractmethod
 
+import BlueLLMTeam.PromptDict as prompt
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
 from BlueLLMTeam.agents.base import AgentRoleBase
 from BlueLLMTeam.utils import ThreadWithReturnValue
-import BlueLLMTeam.PromptDict as prompt
+from BlueLLMTeam.database.db_interaction import fetch_all_session_logs
 
 
 logger = logging.getLogger(__file__)
@@ -114,9 +115,11 @@ class CowrieCommandDesigner(CommandDesigner):
         return {}
     
     def load_seen_commands(self) -> dict[str, int]:
-        return {"cd home": 1, "ls": 2}
+        logs = fetch_all_session_logs(save_local_cache=True, split_commands=True)
+        return logs["input_cmd"].value_counts().to_dict()
 
 
 if __name__ == "__main__":
     from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
-    print(CowrieCommandDesigner(ChatGPTEndpoint()).generate_command_responses())
+    cmd_designer = CowrieCommandDesigner(ChatGPTEndpoint())
+    print(cmd_designer.generate_command_responses(k=5))
