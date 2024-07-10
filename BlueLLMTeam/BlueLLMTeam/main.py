@@ -96,9 +96,9 @@ def main():
     logging.basicConfig(level=log_level)
 
     # Verify docker
-    # if not verify_docker_installation():
-    #     print("Failed to verify the docker installation...")
-    #     return
+    if not verify_docker_installation():
+        print("Failed to verify the docker installation...")
+        return
 
     if args.verbose:
         print("\nRunning with the following arguments:")
