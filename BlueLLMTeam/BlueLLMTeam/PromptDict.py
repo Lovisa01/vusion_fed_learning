@@ -172,3 +172,12 @@ def file_system_creator(tokens: dict[str, str]) -> dict[str, str]:
         "model" : "gpt-3.5-turbo-0125",
     }
 
+
+def linux_command_response(tokens: dict[str, str]) -> dict[str, str]:
+    return {
+        "systemRole": f"You are Linux expert at a company with the following information {company_info}. You know all linux commands and can give realistic outputs for any command you are presented with. ",
+        "user": "Please provide a realistic output for the command you are presented with. Give no additional contents.",
+        "context": "",
+        "message": tokens['command'],
+        "model" : "gpt-3.5-turbo-0125",
+    }
