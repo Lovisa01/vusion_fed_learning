@@ -141,9 +141,12 @@ def fetch_all_session_logs(
         sessions = sessions - set(local_cache["session_id"])
     else:
         local_cache = None
-
-    with trange(len(sessions), desc="Getting all logs from the database") as pbar:
-        new_logs = asyncio.run(get_all_session_logs(sessions, pbar))
+    
+    if len(sessions) > 0:
+        with trange(len(sessions), desc="Getting all logs from the database") as pbar:
+            new_logs = asyncio.run(get_all_session_logs(sessions, pbar))
+    else:
+        new_logs = pd.DataFrame([])
     
     if local_cache is None:
         logs = new_logs

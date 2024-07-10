@@ -6,6 +6,7 @@ import BlueLLMTeam.PromptDict as prompt
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
 from BlueLLMTeam.agents.base import AgentRoleBase
 from BlueLLMTeam.utils.threading import ThreadWithReturnValue
+from BlueLLMTeam.utils.path import conf as get_configuration_file
 from BlueLLMTeam.database.db_interaction import fetch_all_session_logs
 
 
@@ -36,7 +37,7 @@ class CommandDesigner(AgentRoleBase):
         Check if the command is known
         """
         # TODO: Make more complex
-        return cmd in self.known_commands
+        return cmd.lstrip().split(" ")[0] in self.known_commands
     
     def freq_unknown_commands(self) -> dict[str, int]:
         """
@@ -112,7 +113,8 @@ class CommandDesigner(AgentRoleBase):
 class CowrieCommandDesigner(CommandDesigner):
 
     def load_known_commands(self) -> set[str]:
-        return {}
+        # Read the known commands from a configuration file
+        return set(get_configuration_file("cowrie_commands.txt").read_text().split())
     
     def load_seen_commands(self) -> dict[str, int]:
         logs = fetch_all_session_logs(save_local_cache=True, split_commands=True)
