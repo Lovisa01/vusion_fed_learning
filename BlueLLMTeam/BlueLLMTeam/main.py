@@ -9,7 +9,7 @@ from BlueLLMTeam.agents import TeamLeaderRole, CowrieDesignerRole
 from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
 from BlueLLMTeam.banner import TEAM_BANNER, LLM_DESIGNER, LLM_TEAM_LEAD
 from BlueLLMTeam.monitor import monitor_logs
-from BlueLLMTeam.utils import verify_docker_installation
+from BlueLLMTeam.utils.docker import verify_docker_installation
 
 
 designers: list[CowrieDesignerRole] = []

@@ -12,7 +12,7 @@ Python file content generator creating scripts during the file creation process 
 import json
 from pathlib import Path
 
-from BlueLLMTeam.utils import replace_tokens
+from BlueLLMTeam.utils.text import replace_tokens
 
 data_folder = Path(__file__).parent.parent.parent / 'data'
 

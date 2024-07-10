@@ -1,5 +1,5 @@
 import pytest
-from BlueLLMTeam.utils import extract_json_from_text
+from BlueLLMTeam.utils.text import extract_json_from_text
 
 def test_valid_json_square_brackets():
     text = "Some text before [ { \"key1\": \"value1\" }, { \"key2\": \"value2\" } ] some text after"

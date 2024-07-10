@@ -4,7 +4,7 @@ from random import randint
 
 from BlueLLMTeam.agents.base import AgentRoleBase
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
-from BlueLLMTeam.utils import extract_json_from_text, extract_markdown_list, replace_tokens
+from BlueLLMTeam.utils.text import extract_json_from_text, extract_markdown_list, replace_tokens
 
 
 logger = logging.getLogger(__name__)

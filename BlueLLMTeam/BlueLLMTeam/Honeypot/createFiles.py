@@ -9,7 +9,7 @@ from tqdm import tqdm
 from BlueLLMTeam import PromptDict as prompt
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase, ChatGPTEndpoint
 from BlueLLMTeam.Honeypot import AddContents
-from BlueLLMTeam.utils import ThreadWithReturnValue
+from BlueLLMTeam.utils.threading import ThreadWithReturnValue
 
 
 logger = logging.getLogger(__name__)

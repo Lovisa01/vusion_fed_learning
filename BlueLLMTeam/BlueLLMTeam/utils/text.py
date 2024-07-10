@@ -1,8 +1,4 @@
 import json
-import logging
-import subprocess
-import threading
-from typing import Callable, Iterable, Mapping, Any
 
 
 def extract_json_from_text(text: str):
@@ -79,54 +75,3 @@ def replace_tokens(text: str, tokens: dict[str, str]):
     for token, replacement in tokens.items():
         text = text.replace(f"{{{token}}}", str(replacement))
     return text
-
-
-def verify_docker_installation() -> bool:
-    """
-    Verify that docker has been installed and the daemon is running
-    """
-    # Check if docker is installed
-    try:
-        # Run the "docker --version" command and capture its output
-        version_result = subprocess.run(["docker", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        
-        # Check if the command was executed successfully
-        if version_result.returncode == 0:
-            # Print docker version and return True
-            logging.info(f"Running tests with {version_result.stdout.strip()}")
-        else:
-            # Print the error and return False
-            logging.critical(f"Error when testing docker installation: {version_result.stderr}")
-            return False
-    except FileNotFoundError:
-        # This exception is raised if the "docker" command is not found, indicating Docker may not be installed
-        logging.critical("Docker command not found. Is Docker installed?")
-        return False
-    
-    # Check if the docker daemon is running
-    try:
-        # Ping the socket the daemon should be running on
-        ping_result = subprocess.run(["curl", "-s", "--unix-socket", "/var/run/docker.sock", "http/_ping"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if ping_result.returncode == 0:
-            return True
-        else:
-            logging.critical("Docker daemon is not running.")
-            return False
-    except FileNotFoundError:
-        logging.critical("curl command not found. Is curl installed?")
-        return False
-    
-
-class ThreadWithReturnValue(threading.Thread):
-    
-    def __init__(self, group: None = None, target: Callable[..., object] | None = None, name: str | None = None, args: Iterable[Any] = [], kwargs: Mapping[str, Any] | None = None, *, daemon: bool | None = None) -> None:
-        threading.Thread.__init__(self, group, target, name, args, kwargs, daemon=daemon)
-        self._return = None
-
-    def run(self):
-        if self._target is not None:
-            self._return = self._target(*self._args, **self._kwargs)
-
-    def join(self, *args):
-        threading.Thread.join(self, *args)
-        return self._return

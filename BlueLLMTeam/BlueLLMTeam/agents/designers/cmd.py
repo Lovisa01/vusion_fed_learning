@@ -5,7 +5,7 @@ from abc import abstractmethod
 import BlueLLMTeam.PromptDict as prompt
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
 from BlueLLMTeam.agents.base import AgentRoleBase
-from BlueLLMTeam.utils import ThreadWithReturnValue
+from BlueLLMTeam.utils.threading import ThreadWithReturnValue
 from BlueLLMTeam.database.db_interaction import fetch_all_session_logs
 
 
