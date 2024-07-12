@@ -22,6 +22,7 @@ class Arguments:
     frequency: float
     yes: bool
     light_weight: bool
+    max_honeypots: int
 
     @classmethod
     def from_cli(cls):
@@ -34,6 +35,7 @@ class Arguments:
         parser.add_argument("--frequency", "-f", type=float, default=1, help="Update frequency of the analyst")
         parser.add_argument("--yes", "-y", action="store_true", help="Skip all confirmations and allow all actions")
         parser.add_argument("--light-weight", "-l", action="store_true", help="Create a light weight file system without any file contents")
+        parser.add_argument("--max-honeypots", "-m", type=int, default=-1, help="Do not deploy more honeypots than this")
         
         args = parser.parse_args()
         return cls(
@@ -42,6 +44,7 @@ class Arguments:
             frequency=args.frequency,
             yes=args.yes,
             light_weight=args.light_weight,
+            max_honeypots=args.max_honeypots,
         )
     
     @property
@@ -135,6 +138,10 @@ def main():
 
         if happy_with_llm_decision("Generate descriptions for all honeypots", args.yes):
             break
+
+    for honey_type, count in honeypot_count.items():
+        if args.max_honeypots != -1 and count > args.max_honeypots:
+            honeypot_count[honey_type] = args.max_honeypots
     
     # Create honeypot descriptions
     while True:
