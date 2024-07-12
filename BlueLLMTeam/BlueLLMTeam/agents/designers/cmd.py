@@ -1,3 +1,4 @@
+import string
 import logging
 from tqdm import trange, tqdm
 from abc import abstractmethod
@@ -84,12 +85,12 @@ class CommandDesigner(AgentRoleBase):
                 t.start()
             
             # Wait for all threads to complete
-            command_responses = {}
+            command_responses = []
             for t in threads:
                 cmd, response = t.join()
                 if response is not None:
-                    command_responses[cmd] = response
-                
+                    command_responses.append((cmd, response))
+
         return command_responses
     
     def generate_command_response(self, cmd: str, pbar: tqdm = None) -> str:
@@ -119,6 +120,26 @@ class CowrieCommandDesigner(CommandDesigner):
     def load_seen_commands(self) -> dict[str, int]:
         logs = fetch_all_session_logs(save_local_cache=True, split_commands=True)
         return logs["input_cmd"].value_counts().to_dict()
+
+    def freq_unknown_commands(self) -> dict[str, int]:
+        freq_unknown = super().freq_unknown_commands()
+
+        # Remove duplicates of commands with different arguments
+        # as cowrie only supports one output per command
+        # Also only accept commands without any special characters
+        best_command: dict[str, tuple[str, int]] = {}
+        for full_cmd, count in freq_unknown.items():
+            cmd = full_cmd.split(" ", 1)[0].strip()
+            
+            allowed_chars = set(string.ascii_letters + string.digits + '_-')
+            if not all(x in allowed_chars for x in cmd):
+                # skip this command
+                continue
+
+            if best_command.get(cmd, (None, 0))[1] < count:
+                best_command[cmd] = (full_cmd, count)
+            
+        return {cmd: count for cmd, count in best_command.values()}
 
 
 if __name__ == "__main__":

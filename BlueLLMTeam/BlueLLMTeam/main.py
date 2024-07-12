@@ -163,9 +163,13 @@ def main():
     while True:
         print("Creating custom contents for all requested honeypots...")
         for honeypot_description in tqdm(honeypot_descriptions):
-            designer = CowrieDesignerRole(llm_endpoint)
+            designer = CowrieDesignerRole(
+                llm_endpoint,
+                honeypot_description["description"],
+                light_weight=args.light_weight,
+            )
             designers.append(designer)
-            designer.create_honeypot(honeypot_description["description"], light_weight=args.light_weight)
+            designer.create_honeypot()
         
         if happy_with_llm_decision("Deploy honeypots according to the descriptions", args.yes):
             break
