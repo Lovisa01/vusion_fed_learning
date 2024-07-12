@@ -81,7 +81,8 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                 ports={"2222/tcp": self.port},
                 volumes={
                     self.honeypot_data / "custom.pickle": {"bind": "/cowrie/cowrie-git/share/cowrie/fs.pickle", "mode": "rw"},
-                    self.fake_fs: {"bind": "/cowrie/cowrie-git/honeyfs/", "mode": "rw"}
+                    self.txtcmds: {"bind": "/cowrie/cowrie-git/share/cowrie/txtcmds", "mode": "rw"},
+                    self.fake_fs: {"bind": "/cowrie/cowrie-git/honeyfs/", "mode": "rw"},
                 },
                 environment={
                     "HONEYPOT_NAME": "cowrie-prod"
@@ -204,8 +205,6 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         """
         # Copy all files from the fake filesystem to the pickle filesystem
         for p in self.fake_fs.rglob("*"):
-            print(p)
-            print(p.is_file())
             if p.is_file():
                 pickle_path = self.pickle_fs / p.relative_to(self.fake_fs)
                 pickle_path.parent.mkdir(parents=True, exist_ok=True)
