@@ -95,7 +95,7 @@ class ChatGPTEndpoint(LLMEndpointBase):
             time.sleep(random.random() * MAX_TIME_BETWEEN_RETRIES)
             return self.ask(prompt_dict=prompt_dict, max_retries=max_retries, retry=retry + 1)
         except Exception as e:
-            print(f"An error occurred when querying ChatGPT: {e}")
+            logger.error(f"An error occurred when querying ChatGPT: {e}")
             raise
 
 
@@ -121,5 +121,5 @@ class Llama2Endpoint(LLMEndpointBase):
             )
             return response["message"]["content"]
         except Exception as e:
-            print(f"An error occurred: {e}")
+            logger.error(f"An error occurred: {e}")
             raise

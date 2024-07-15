@@ -179,6 +179,10 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         for full_cmd, response in command_responses:
             cmd = full_cmd.split(" ")[0].strip()
 
+            if not cmd:
+                # Ignore empty commands
+                continue
+
             # Add to pickle
             cmd_path = pickle_bin_path / cmd
             cmd_path.touch()
@@ -209,7 +213,6 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                 pickle_path = self.pickle_fs / p.relative_to(self.fake_fs)
                 pickle_path.parent.mkdir(parents=True, exist_ok=True)
                 pickle_path.touch()
-                print(pickle_path)
 
         # Pickle
         pickledir(self.pickle_fs, self.depth, self.honeypot_data / "custom.pickle")

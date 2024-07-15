@@ -140,9 +140,3 @@ class CowrieCommandDesigner(CommandDesigner):
                 best_command[cmd] = (full_cmd, count)
             
         return {cmd: count for cmd, count in best_command.values()}
-
-
-if __name__ == "__main__":
-    from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
-    cmd_designer = CowrieCommandDesigner(ChatGPTEndpoint())
-    print(cmd_designer.generate_command_responses(k=5))
