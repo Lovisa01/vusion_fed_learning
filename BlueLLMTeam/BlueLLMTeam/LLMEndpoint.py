@@ -10,7 +10,7 @@ import logging
 import time
 import random
 
-from BlueLLMTeam import data_promts_endpoint
+from BlueLLMTeam.database import data_promts_endpoint
 import threading
 from random import choice
 # YOU WILL HAVE TO LOAD FROM YOUR ENVINVORNMENT FILE

@@ -1,4 +1,4 @@
-from fetch_data import fetch_data
+from BlueLLMTeam.database.db_interaction import fetch_all_session_logs
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
@@ -247,7 +247,7 @@ def analyse_data(data: pd.DataFrame):
 
 
 def main():
-    # df = fetch_data()
+    # df = fetch_all_session_logs()
     df = pd.read_csv("data/logs.csv")
     analyse_data(df)
 
