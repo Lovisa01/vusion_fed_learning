@@ -30,7 +30,7 @@ async def fetch_all_sessions(sessions: list[str], pbar: tqdm):
     return results
 
 
-def main():
+def fetch_data():
     # Get all sessions from the database
     print("Retrieving all sessions from the database...")
     response = requests.get(API_URL)
@@ -54,7 +54,8 @@ def main():
     DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(DATABASE_PATH, header=True, index=False)
     print("Done!")
+    return df
 
 
 if __name__ == "__main__":
-    main()
+    fetch_data()
