@@ -179,6 +179,10 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         for full_cmd, response in command_responses:
             cmd = full_cmd.split(" ")[0].strip()
 
+            if not cmd:
+                # Ignore empty commands
+                continue
+
             # Add to pickle
             cmd_path = pickle_bin_path / cmd
             cmd_path.touch()
