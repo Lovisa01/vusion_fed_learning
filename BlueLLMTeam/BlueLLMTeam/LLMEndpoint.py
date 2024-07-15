@@ -121,5 +121,5 @@ class Llama2Endpoint(LLMEndpointBase):
             )
             return response["message"]["content"]
         except Exception as e:
-            logger.warning(f"An error occurred: {e}")
+            logger.error(f"An error occurred: {e}")
             raise
