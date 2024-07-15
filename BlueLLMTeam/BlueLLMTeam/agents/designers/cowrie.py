@@ -189,7 +189,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
 
             # Add to txtcmds
             response_path = txtcmds_bin_path / cmd
-            response_path.write_text(response)
+            response_path.write_text(response.strip() + "\n")
 
     def configure_banners_and_prompts(self):
         """
