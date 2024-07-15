@@ -213,7 +213,6 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                 pickle_path = self.pickle_fs / p.relative_to(self.fake_fs)
                 pickle_path.parent.mkdir(parents=True, exist_ok=True)
                 pickle_path.touch()
-                print(pickle_path)
 
         # Pickle
         pickledir(self.pickle_fs, self.depth, self.honeypot_data / "custom.pickle")

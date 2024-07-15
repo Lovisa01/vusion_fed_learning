@@ -81,7 +81,6 @@ def get_logs_from_session(session_id: str) -> list[dict]:
     """
     Get the logs from a session
     """
-    print(f"\n###### New interaction with session {session_id} ######")
     url = f"{LOGS_ENDPOINT}/{session_id}"
     response = requests.get(url)
 
@@ -120,7 +119,7 @@ async def get_all_session_logs(sessions: set[str], pbar: tqdm):
     data = []
     for session_id, interactions in results:
         if interactions is None:
-            print(f"Failed to retrieve logs from session {session_id}")
+            logger.warning(f"Failed to retrieve logs from session {session_id}")
             continue
         data.extend(interactions)
 
