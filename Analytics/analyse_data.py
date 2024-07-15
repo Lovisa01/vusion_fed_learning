@@ -1,9 +1,13 @@
-from BlueLLMTeam.database.db_interaction import fetch_all_session_logs
+from BlueLLMTeam.database.db_interaction import fetch_all_session_logs, get_all_session_logs
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import matplotlib.dates as mdates
 import numpy as np
+import json
+from tqdm import trange
+import asyncio
+
 
 
 def plot_cmd_frequency(cmd_counts, honeypot):
@@ -198,7 +202,7 @@ def analyse_data(data: pd.DataFrame):
     for index, (honeypot, data) in enumerate(honeypots.items()):
         sessions_per_ip = data.groupby('src_ip')['session_id'].nunique()
         total_sessions = sessions_per_ip.sum()
-        threshold = 0.01 * total_sessions
+        threshold = 0.03 * total_sessions
         significant_sessions_per_ip = sessions_per_ip[sessions_per_ip >= threshold]
         other_sessions_count = total_sessions - significant_sessions_per_ip.sum()
 
@@ -246,9 +250,34 @@ def analyse_data(data: pd.DataFrame):
     plt.show()
 
 
+def read_json_session_ids(filename):
+    session_ids = []
+    with open(filename, 'r') as f:
+        for line in f:
+            session_ids.append(json.loads(line)['Item']['session_id']['S'])
+
+    return set(session_ids)
+
+
 def main():
     # df = fetch_all_session_logs()
-    df = pd.read_csv("data/logs.csv")
+    # df = pd.read_csv("data/logs.csv")
+    # analyse_data(df)
+    session_ids = read_json_session_ids("data/logs.json")
+    # print(read_json_logs("data/logs.json").head(30))
+    df = fetch_all_session_logs(
+        session_ids=session_ids, 
+        save_local_cache=True, 
+        honeypot_names=['cowrie-default', 'cowrie-prod'],
+        blacklist_ips=[
+            '138.247.104.63', #FRANK
+            '94.70.195.153', #DoS attacker
+            '178.33.41.129', #DoS attacker
+            '172.17.0.1', #Docker
+            '213.115.3.138', #Lovisa?
+        ]
+    )
+    print(df.head(100))
     analyse_data(df)
 
 
