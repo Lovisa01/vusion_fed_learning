@@ -1,2 +1,4 @@
 aiohttp
 pandas
+matplotlib
+numpy

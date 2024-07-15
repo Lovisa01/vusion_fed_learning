@@ -129,21 +129,24 @@ async def get_all_session_logs(sessions: set[str], pbar: tqdm):
 def fetch_all_session_logs(
         honeypot_names: list[str] = None, 
         save_local_cache: bool = False, 
-        split_commands: bool = False
+        split_commands: bool = False,
+        session_ids: list[str] = None,
+        blacklist_ips: list[str] = [],
     ) -> pd.DataFrame:
-    sessions = get_all_sessions()
+    if session_ids is None:
+        session_ids = get_all_sessions()
 
     # Load local logs from cache
     if LOCAL_LOG_DB_CACHE.exists():
         local_cache = pd.read_csv(LOCAL_LOG_DB_CACHE)
         # Remove sessions already in the database
-        sessions = sessions - set(local_cache["session_id"])
+        session_ids = session_ids - set(local_cache["session_id"])
     else:
         local_cache = None
     
-    if len(sessions) > 0:
-        with trange(len(sessions), desc="Getting all logs from the database") as pbar:
-            new_logs = asyncio.run(get_all_session_logs(sessions, pbar))
+    if len(session_ids) > 0:
+        with trange(len(session_ids), desc="Getting all logs from the database") as pbar:
+            new_logs = asyncio.run(get_all_session_logs(session_ids, pbar))
     else:
         new_logs = pd.DataFrame([])
     
@@ -156,6 +159,10 @@ def fetch_all_session_logs(
     if save_local_cache:
         LOCAL_LOG_DB_CACHE.parent.mkdir(exist_ok=True)
         logs.to_csv(LOCAL_LOG_DB_CACHE, header=True, index=False)
+
+    # Filter out blacklisted IPs
+    if blacklist_ips:
+        logs = logs[~logs["src_ip"].isin(blacklist_ips)]
 
     if split_commands:
         logs = split_chained_commands(logs)
