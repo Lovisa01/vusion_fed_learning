@@ -41,8 +41,8 @@ def monitor_logs(frequency: float, verbosity: int = 0):
     print("Ready to analyse attackers. Waiting for connections...")
 
     prev_time = time.time_ns()
-    try:
-        while True:
+    while True:
+        try:
             # Sleep until next loop
             curr_time = time.time_ns()
             exec_time = (curr_time - prev_time) / 1e9
@@ -61,8 +61,12 @@ def monitor_logs(frequency: float, verbosity: int = 0):
 
             for session_id in sessions:
                 analyze_session(session_id, analyst)
-    except KeyboardInterrupt:
-        print("User interrupted main thread. Terminating program...")
+        except KeyboardInterrupt:
+            logger.info("User interrupted main thread. Terminating program...")
+            break
+        except Exception as e:
+            logger.warning(f"Error when analyzing the logs: {e}")
+            pass
 
 
 if __name__ == "__main__":
