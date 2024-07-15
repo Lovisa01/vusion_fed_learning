@@ -194,11 +194,7 @@ def main():
         designer.deploy_honeypot()
     
     # Monitor attacker
-    while True:
-        try:
-            monitor_logs(args.frequency, args.verbosity)
-        except Exception as e:
-            logging.warning(f"An error occurred when monitoring logs: {e}")
+    monitor_logs(args.frequency, args.verbosity)
 
     print("Stopping execution")
 
