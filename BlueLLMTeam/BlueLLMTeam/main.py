@@ -23,6 +23,7 @@ class Arguments:
     yes: bool
     light_weight: bool
     max_honeypots: int
+    logfile: str
 
     @classmethod
     def from_cli(cls):
@@ -36,6 +37,7 @@ class Arguments:
         parser.add_argument("--yes", "-y", action="store_true", help="Skip all confirmations and allow all actions")
         parser.add_argument("--light-weight", "-l", action="store_true", help="Create a light weight file system without any file contents")
         parser.add_argument("--max-honeypots", "-m", type=int, default=-1, help="Do not deploy more honeypots than this")
+        parser.add_argument("--logfile", "-L", type=str, default=None, help="Log file to write to")
         
         args = parser.parse_args()
         return cls(
@@ -45,6 +47,7 @@ class Arguments:
             yes=args.yes,
             light_weight=args.light_weight,
             max_honeypots=args.max_honeypots,
+            logfile=args.logfile,
         )
     
     @property
@@ -82,6 +85,22 @@ def happy_with_llm_decision(prompt: str, yes: bool = False) -> bool:
     # Quit the application
     exit()
 
+def config_logging(logfile: str, verbosity: int):
+    log_level = logging.WARNING
+    if verbosity == 1:
+        log_level = logging.INFO
+    elif verbosity > 1:
+        log_level = logging.DEBUG
+    
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(log_level)
+    handlers = [stream_handler]
+    if logfile is not None:
+        file_handler = logging.FileHandler(logfile)
+        file_handler.setLevel(min(log_level, logging.INFO))
+        handlers.append(file_handler)
+    
+    logging.basicConfig(level=min(log_level, logging.INFO), handlers=handlers)
 
 def main():
     # Greeting
@@ -91,12 +110,8 @@ def main():
     # Parse CLI arguments
     args = Arguments.from_cli()
 
-    log_level = logging.WARNING
-    if args.verbosity == 1:
-        log_level = logging.INFO
-    elif args.verbosity > 1:
-        log_level = logging.DEBUG
-    logging.basicConfig(level=log_level)
+    # Configure logging
+    config_logging(args.logfile, args.verbosity)
 
     # Verify docker
     if not verify_docker_installation():
@@ -179,7 +194,11 @@ def main():
         designer.deploy_honeypot()
     
     # Monitor attacker
-    monitor_logs(args.frequency, args.verbosity)
+    while True:
+        try:
+            monitor_logs(args.frequency, args.verbosity)
+        except Exception as e:
+            logging.warning(f"An error occurred when monitoring logs: {e}")
 
     print("Stopping execution")
 
