@@ -176,27 +176,31 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         """
         Set some basic configurations for cowrie
         """
-        keys = [
-            "hostname",
-            "ssh_version",
-            "version",
-            "kernel_version",
-            "kernel_build_string",
-            "hardware_platform",
-            "operating_system",
-        ]
+        options = { # Option: Section
+            "hostname": "honeypot",
+            "ssh_version": "shell",
+            # "version": "ssh", # version should be ssh but generates system
+            "kernel_version": "shell",
+            "kernel_build_string": "shell",
+            "hardware_platform": "shell",
+            "operating_system": "shell",
+        }
         json_response = self.llm.ask(
-            prompt_dict=prompt.cowrie_configuration_creator({"keys": keys})
+            prompt_dict=prompt.cowrie_configuration_creator({"keys": list(options.keys())})
         ).content
 
         json_data = json.loads(json_response)
+        
+        # Manually add custom version
+        json_data["version"] = "SSH-2.0-OpenSSH_5.3p1 Debian-3ubuntu7"
+        options["version"] = "ssh"
 
         self.honey_etc.mkdir(parents=True, exist_ok=True)
         with open(self.honey_etc / "cowrie.cfg", "w") as f:
-            for key in keys:
+            for key in options:
                 if key not in json_data:
                     continue
-                f.write(f"{key} = {json_data[key]}\n")
+                f.write(f"[{options[key]}]\n{key} = {json_data[key]}\n")
 
     def create_fake_filesystem(self):
         """
