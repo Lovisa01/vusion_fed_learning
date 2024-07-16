@@ -7,6 +7,7 @@ import logging
 from random import randint
 from tqdm import trange, tqdm
 import threading
+import itertools
 
 from BlueLLMTeam.agents.designers.base import HoneypotDesignerRole
 from BlueLLMTeam.agents.base import ROOT_DIR
@@ -176,31 +177,30 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         """
         Set some basic configurations for cowrie
         """
-        options = { # Option: Section
-            "hostname": "honeypot",
-            "ssh_version": "shell",
-            # "version": "ssh", # version should be ssh but generates system
-            "kernel_version": "shell",
-            "kernel_build_string": "shell",
-            "hardware_platform": "shell",
-            "operating_system": "shell",
+        options = {
+            "honeypot": ["hostname"],
+            "shell": ["ssh_version", "kernel_version", "kernel_build_string", "hardware_platform", "operating_system"],
+            # "ssh": ["version"], # version should be ssh version  but LLM generates system
         }
+        option_keys = list(itertools.chain(options.values()))
         json_response = self.llm.ask(
-            prompt_dict=prompt.cowrie_configuration_creator({"keys": list(options.keys())})
+            prompt_dict=prompt.cowrie_configuration_creator({"keys": option_keys})
         ).content
 
         json_data = json.loads(json_response)
         
         # Manually add custom version
         json_data["version"] = "SSH-2.0-OpenSSH_5.3p1 Debian-3ubuntu7"
-        options["version"] = "ssh"
+        options["ssh"] = ["version"]
 
         self.honey_etc.mkdir(parents=True, exist_ok=True)
         with open(self.honey_etc / "cowrie.cfg", "w") as f:
-            for key in options:
-                if key not in json_data:
-                    continue
-                f.write(f"[{options[key]}]\n{key} = {json_data[key]}\n")
+            for section, opts in options.items():
+                f.write(f"[{section}]\n")
+                for opt in opts:
+                    if opt not in json_data:
+                        continue
+                    f.write(f"{opt} = {json_data[opt]}\n")
 
     def create_fake_filesystem(self):
         """
