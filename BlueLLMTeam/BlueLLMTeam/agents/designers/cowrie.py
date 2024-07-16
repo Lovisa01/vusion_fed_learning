@@ -1,9 +1,12 @@
 import os
+import json
 import time
 import shutil
 import docker
 import logging
 from random import randint
+from tqdm import trange, tqdm
+import threading
 
 from BlueLLMTeam.agents.designers.base import HoneypotDesignerRole
 from BlueLLMTeam.agents.base import ROOT_DIR
@@ -11,6 +14,8 @@ from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
 from BlueLLMTeam.Honeypot.createFiles import generate_file_system, generate_random_id, generate_file_contents
 from BlueLLMTeam.Honeypot.createfs import pickledir
 from BlueLLMTeam.agents.designers.cmd import CowrieCommandDesigner
+from BlueLLMTeam.agents.designers.fs import copy_local_filenames
+import BlueLLMTeam.PromptDict as prompt
 
 
 HONEYPOT_FS = ROOT_DIR / "Honeypot/tmpfs"
@@ -22,6 +27,48 @@ AVAILABLE_HONEYPOTS = {
 }
 HONEYPOT_RESOURCES = "\n".join(f"- {honeypot}: {description}" for honeypot, description in AVAILABLE_HONEYPOTS.items())
 EXAMPLE_OUTPUT = "\n".join(f"- {honeypot}: {randint(0, 5)}" for honeypot in AVAILABLE_HONEYPOTS.keys())
+
+linux_top_level_directories = [
+    "bin",
+    "boot",
+    "dev",
+    "etc",
+    # "home", # Do not include
+    "lib",
+    "lib64",
+    "media",
+    "mnt",
+    "opt",
+    "proc",
+    # "root", # Do not include
+    "run",
+    "sbin",
+    "srv",
+    "sys",
+    "tmp",
+    "usr",
+    "var"
+]
+
+linux_system_files = [
+    "proc/net/arp",
+    "proc/mounts",
+    "proc/version",
+    "proc/meminfo",
+    "proc/modules",
+    "proc/cpuinfo",
+    "etc/group",
+    "etc/shadow",
+    "etc/host.conf",
+    "etc/issue",
+    "etc/resolv.conf",
+    "etc/hostname",
+    "etc/hosts",
+    "etc/inittab",
+    "etc/passwd",
+    "etc/motd",
+]
+
 
 
 
@@ -43,6 +90,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         self.fake_fs = self.honeypot_data / "honeyfs"
         self.pickle_fs = self.honeypot_data / "picklefs"
         self.txtcmds = self.honeypot_data / "txtcmds"
+        self.honey_etc = self.honeypot_data / "etc"
 
         # Honeypot settings
         self.honeypot_description = honeypot_description
@@ -54,8 +102,12 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         self.logs_updated = False
 
     def create_honeypot(self) -> str:
+        self.configure_cowrie()
         self.create_fake_filesystem()
         self.prepare_fake_commands()
+        self.add_system_information_files()
+        self.add_user_credentials()
+        self.configure_banners_and_prompts()
         self.pickle_fake_filesystem()
 
     def deploy_honeypot(self):
@@ -83,9 +135,10 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                     self.honeypot_data / "custom.pickle": {"bind": "/cowrie/cowrie-git/share/cowrie/fs.pickle", "mode": "rw"},
                     self.txtcmds: {"bind": "/cowrie/cowrie-git/share/cowrie/txtcmds", "mode": "rw"},
                     self.fake_fs: {"bind": "/cowrie/cowrie-git/honeyfs/", "mode": "rw"},
+                    self.honey_etc: {"bind": "/cowrie/cowrie-git/etc/", "mode": "rw"},
                 },
                 environment={
-                    "HONEYPOT_NAME": "cowrie-prod"
+                    "HONEYPOT_NAME": os.environ.get("HONEYPOT_NAME", "cowrie")
                 },
             )
             logger.info(f"Successfully created Cowrie container ID: {self.cowrie_container.id}")
@@ -123,7 +176,27 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         """
         Set some basic configurations for cowrie
         """
-        pass
+        keys = [
+            "hostname",
+            "ssh_version",
+            "version",
+            "kernel_version",
+            "kernel_build_string",
+            "hardware_platform",
+            "operating_system",
+        ]
+        json_response = self.llm.ask(
+            prompt_dict=prompt.cowrie_configuration_creator({"keys": keys})
+        ).content
+
+        json_data = json.loads(json_response)
+
+        self.honey_etc.mkdir(parents=True, exist_ok=True)
+        with open(self.honey_etc / "cowrie.cfg", "w") as f:
+            for key in keys:
+                if key not in json_data:
+                    continue
+                f.write(f"{key} = {json_data[key]}\n")
 
     def create_fake_filesystem(self):
         """
@@ -189,7 +262,44 @@ class CowrieDesignerRole(HoneypotDesignerRole):
 
             # Add to txtcmds
             response_path = txtcmds_bin_path / cmd
-            response_path.write_text(response)
+            response_path.write_text(response.strip() + "\n")
+
+    def _add_system_file(self, file: str, pbar: tqdm) -> None:
+        """
+        Add contents to a system file
+        """
+        tokens = {
+            "file": file
+        }
+        file_contents = self.llm.ask(prompt.linux_important_files_creator(tokens)).content
+        
+        file_path = self.fake_fs / file
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(file_contents)
+        pbar.update()
+
+    def add_system_information_files(self):
+        """
+        Add contents to files containing system information
+        """
+        # Create a separate thread for each generation
+        threads: list[threading.Thread] = []
+
+        with trange(len(linux_system_files), desc="Generating system files", leave=False) as pbar:
+            for file in linux_system_files:
+                kwargs = {
+                    "file": file,
+                    "pbar": pbar,
+                }
+                t = threading.Thread(target=self._add_system_file, kwargs=kwargs)
+                threads.append(t)
+                    
+            # Spawn new threads
+            for t in threads:
+                t.start()
+            # Wait for all threads to complete
+            for t in threads:
+                t.join()
 
     def configure_banners_and_prompts(self):
         """
@@ -213,6 +323,13 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                 pickle_path = self.pickle_fs / p.relative_to(self.fake_fs)
                 pickle_path.parent.mkdir(parents=True, exist_ok=True)
                 pickle_path.touch()
+
+        # Add more files. Take them from the current filesystem
+        for folder in linux_top_level_directories:
+            try:
+                copy_local_filenames(f"/{folder}", self.pickle_fs / folder, max_depth=4)
+            except ValueError:
+                pass
 
         # Pickle
         pickledir(self.pickle_fs, self.depth, self.honeypot_data / "custom.pickle")

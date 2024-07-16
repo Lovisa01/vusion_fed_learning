@@ -181,3 +181,24 @@ def linux_command_response(tokens: dict[str, str]) -> dict[str, str]:
         "message": tokens['command'],
         "model" : "gpt-3.5-turbo-0125",
     }
+
+
+def linux_important_files_creator(tokens: dict[str, str]) -> dict[str, str]:
+    return {
+        "systemRole": f"You are Linux expert at a company with the following information {company_info}. You know everything about how a the linux file system is built. ",
+        "user": "Please provide realistic file contents for the file you are presented with. Give no additional contents.",
+        "context": "",
+        "message": tokens['file'],
+        "model" : "gpt-3.5-turbo-0125",
+    }
+
+
+def cowrie_configuration_creator(tokens: dict[str, str]) -> dict[str, str]:
+    return {
+        "systemRole": f"You are cowrie honeypot expert at a company with the following information {company_info}. You know everything about Cowrie and how to best foul hackers.",
+        "user": "Please provide realistic contents for the following configuration keys in cowrie. Please give your response as a JSON object with the keys at the top level.",
+        "context": "",
+        "message": tokens['keys'],
+        "model" : "gpt-3.5-turbo-0125",
+        "json_format": True,
+    }
