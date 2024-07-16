@@ -11,6 +11,7 @@ from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
 from BlueLLMTeam.Honeypot.createFiles import generate_file_system, generate_random_id, generate_file_contents
 from BlueLLMTeam.Honeypot.createfs import pickledir
 from BlueLLMTeam.agents.designers.cmd import CowrieCommandDesigner
+from BlueLLMTeam.agents.designers.fs import copy_local_filenames
 
 
 HONEYPOT_FS = ROOT_DIR / "Honeypot/tmpfs"
@@ -213,6 +214,13 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                 pickle_path = self.pickle_fs / p.relative_to(self.fake_fs)
                 pickle_path.parent.mkdir(parents=True, exist_ok=True)
                 pickle_path.touch()
+
+        # Add more files. Take them from the current filesystem
+        for folder in ["proc", "usr", "sbin", "sys", "lib", "etc", "bin"]:
+            try:
+                copy_local_filenames(f"/{folder}", self.pickle_fs / folder, max_depth=4)
+            except ValueError:
+                pass
 
         # Pickle
         pickledir(self.pickle_fs, self.depth, self.honeypot_data / "custom.pickle")
