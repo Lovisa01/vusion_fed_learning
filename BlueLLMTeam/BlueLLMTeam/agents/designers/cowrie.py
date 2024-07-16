@@ -218,22 +218,6 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             light_weight=self.light_weight,
         )
 
-        # Setup a linux file system
-        logger.info("Create linux filesystem")
-        try:
-            # Check if the source folder exists
-            if not os.path.exists(ROOT_DIR / "Honeypot/_honeyfs"):
-                logger.error(f"Source folder does not exist.")
-                raise FileNotFoundError(f"Source folder for filesystem does not exist at {ROOT_DIR / 'Honeypot/_honeyfs'}")
-
-            shutil.copytree(ROOT_DIR / "Honeypot/_honeyfs/etc", self.fake_fs / "etc")
-            shutil.copytree(ROOT_DIR / "Honeypot/_honeyfs/proc", self.fake_fs / "proc")
-            logger.info("Folder successfully copied.")
-        
-        except Exception as e:
-            logger.error(f"An error occurred when copying honeyfs: {str(e)}")
-            raise
-
         logger.info(f"Created honeypot filesystem at {self.fake_fs}")
 
     def prepare_fake_commands(self):
