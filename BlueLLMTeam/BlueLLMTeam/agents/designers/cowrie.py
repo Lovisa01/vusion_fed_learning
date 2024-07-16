@@ -5,6 +5,8 @@ import shutil
 import docker
 import logging
 from random import randint
+from tqdm import trange, tqdm
+import threading
 
 from BlueLLMTeam.agents.designers.base import HoneypotDesignerRole
 from BlueLLMTeam.agents.base import ROOT_DIR
@@ -25,6 +27,48 @@ AVAILABLE_HONEYPOTS = {
 }
 HONEYPOT_RESOURCES = "\n".join(f"- {honeypot}: {description}" for honeypot, description in AVAILABLE_HONEYPOTS.items())
 EXAMPLE_OUTPUT = "\n".join(f"- {honeypot}: {randint(0, 5)}" for honeypot in AVAILABLE_HONEYPOTS.keys())
+
+linux_top_level_directories = [
+    "bin",
+    "boot",
+    "dev",
+    "etc",
+    # "home", # Do not include
+    "lib",
+    "lib64",
+    "media",
+    "mnt",
+    "opt",
+    "proc",
+    # "root", # Do not include
+    "run",
+    "sbin",
+    "srv",
+    "sys",
+    "tmp",
+    "usr",
+    "var"
+]
+
+linux_system_files = [
+    "proc/net/arp",
+    "proc/mounts",
+    "proc/version",
+    "proc/meminfo",
+    "proc/modules",
+    "proc/cpuinfo",
+    "etc/group",
+    "etc/shadow",
+    "etc/host.conf",
+    "etc/issue",
+    "etc/resolv.conf",
+    "etc/hostname",
+    "etc/hosts",
+    "etc/inittab",
+    "etc/passwd",
+    "etc/motd",
+]
+
 
 
 
@@ -215,6 +259,43 @@ class CowrieDesignerRole(HoneypotDesignerRole):
             response_path = txtcmds_bin_path / cmd
             response_path.write_text(response.strip() + "\n")
 
+    def _add_system_file(self, file: str, pbar: tqdm) -> None:
+        """
+        Add contents to a system file
+        """
+        tokens = {
+            "file": file
+        }
+        file_contents = self.llm.ask(prompt.linux_important_files_creator(tokens)).content
+        
+        file_path = self.fake_fs / file
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(file_contents)
+        pbar.update()
+
+    def add_system_information_files(self):
+        """
+        Add contents to files containing system information
+        """
+        # Create a separate thread for each generation
+        threads: list[threading.Thread] = []
+
+        with trange(len(linux_system_files), desc="Generating system files", leave=False) as pbar:
+            for file in linux_system_files:
+                kwargs = {
+                    "file": file,
+                    "pbar": pbar,
+                }
+                t = threading.Thread(target=self._add_system_file, kwargs=kwargs)
+                threads.append(t)
+                    
+            # Spawn new threads
+            for t in threads:
+                t.start()
+            # Wait for all threads to complete
+            for t in threads:
+                t.join()
+
     def configure_banners_and_prompts(self):
         """
         Configure the look of the honeypot
@@ -239,7 +320,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                 pickle_path.touch()
 
         # Add more files. Take them from the current filesystem
-        for folder in ["proc", "usr", "sbin", "sys", "lib", "etc", "bin"]:
+        for folder in linux_top_level_directories:
             try:
                 copy_local_filenames(f"/{folder}", self.pickle_fs / folder, max_depth=4)
             except ValueError:
@@ -253,4 +334,4 @@ if __name__ == "__main__":
     from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
     llm = ChatGPTEndpoint()
     d = CowrieDesignerRole(llm, "")
-    d.configure_cowrie()
+    d.add_system_information_files()
