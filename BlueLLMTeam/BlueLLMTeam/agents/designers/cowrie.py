@@ -333,10 +333,3 @@ class CowrieDesignerRole(HoneypotDesignerRole):
 
         # Pickle
         pickledir(self.pickle_fs, self.depth, self.honeypot_data / "custom.pickle")
-
-
-if __name__ == "__main__":
-    from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
-    llm = ChatGPTEndpoint()
-    d = CowrieDesignerRole(llm, "")
-    d.add_system_information_files()
