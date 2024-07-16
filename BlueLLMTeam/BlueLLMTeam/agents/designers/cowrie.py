@@ -7,7 +7,6 @@ import logging
 from random import randint
 from tqdm import trange, tqdm
 import threading
-import itertools
 
 from BlueLLMTeam.agents.designers.base import HoneypotDesignerRole
 from BlueLLMTeam.agents.base import ROOT_DIR
@@ -17,6 +16,7 @@ from BlueLLMTeam.Honeypot.createfs import pickledir
 from BlueLLMTeam.agents.designers.cmd import CowrieCommandDesigner
 from BlueLLMTeam.agents.designers.fs import copy_local_filenames
 import BlueLLMTeam.PromptDict as prompt
+from BlueLLMTeam.utils.path import conf
 
 
 HONEYPOT_FS = ROOT_DIR / "Honeypot/tmpfs"
@@ -178,29 +178,30 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         Set some basic configurations for cowrie
         """
         options = {
-            "honeypot": ["hostname"],
-            "shell": ["ssh_version", "kernel_version", "kernel_build_string", "hardware_platform", "operating_system"],
-            # "ssh": ["version"], # version should be ssh version  but LLM generates system
+            "hostname": "sys03",
+            "ssh_version": "OpenSSH_8.1p1, OpenSSL 1.1.1a  21 Aug 2021",
+            "kernel_version": "3.8.1-4-amd64",
+            "kernel_build_string": "#1 SMP Debian 3.3.92-1+deb8u2",
+            "hardware_platform": "x86_64",
+            "operating_system": "GNU/Linux",
+            "version_ssh": "SSH-2.0-OpenSSH_5.5p1 Debian-6",
         }
-        option_keys = list(itertools.chain(options.values()))
         json_response = self.llm.ask(
-            prompt_dict=prompt.cowrie_configuration_creator({"keys": option_keys})
+            prompt_dict=prompt.cowrie_configuration_creator({"keys": options})
         ).content
 
+        # Update options with LLM response
         json_data = json.loads(json_response)
-        
-        # Manually add custom version
-        json_data["version"] = "SSH-2.0-OpenSSH_5.3p1 Debian-3ubuntu7"
-        options["ssh"] = ["version"]
+        options.update(json_data)
 
+        # Update cowrie configuration
+        cowrie_conf = conf("cowrie.cfg").read_text()
+        for key, value in options.items():
+            cowrie_conf = cowrie_conf.replace(f"{{{key.upper()}}}", value, 1)
+
+        # Write cowrie configuration
         self.honey_etc.mkdir(parents=True, exist_ok=True)
-        with open(self.honey_etc / "cowrie.cfg", "w") as f:
-            for section, opts in options.items():
-                f.write(f"[{section}]\n")
-                for opt in opts:
-                    if opt not in json_data:
-                        continue
-                    f.write(f"{opt} = {json_data[opt]}\n")
+        (self.honey_etc / "cowrie.cfg").write_text(cowrie_conf)
 
     def create_fake_filesystem(self):
         """
