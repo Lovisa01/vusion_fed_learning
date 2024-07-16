@@ -198,7 +198,7 @@ def cowrie_configuration_creator(tokens: dict[str, str]) -> dict[str, str]:
         "systemRole": f"You are cowrie honeypot expert at a company with the following information {company_info}. You know everything about Cowrie and how to best foul hackers.",
         "user": "Please provide realistic contents for the following configuration keys in cowrie. Please give your response as a JSON object with the keys at the top level.",
         "context": "",
-        "message": tokens['keys'],
+        "message": "\n".join(f"{key}: Example: {value}" for key, value in tokens['keys'].items()),
         "model" : "gpt-3.5-turbo-0125",
         "json_format": True,
     }
