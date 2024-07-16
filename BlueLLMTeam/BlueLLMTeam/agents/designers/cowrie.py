@@ -102,8 +102,12 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         self.logs_updated = False
 
     def create_honeypot(self) -> str:
+        self.configure_cowrie()
         self.create_fake_filesystem()
         self.prepare_fake_commands()
+        self.add_system_information_files()
+        self.add_user_credentials()
+        self.configure_banners_and_prompts()
         self.pickle_fake_filesystem()
 
     def deploy_honeypot(self):
@@ -131,9 +135,10 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                     self.honeypot_data / "custom.pickle": {"bind": "/cowrie/cowrie-git/share/cowrie/fs.pickle", "mode": "rw"},
                     self.txtcmds: {"bind": "/cowrie/cowrie-git/share/cowrie/txtcmds", "mode": "rw"},
                     self.fake_fs: {"bind": "/cowrie/cowrie-git/honeyfs/", "mode": "rw"},
+                    self.honey_etc: {"bind": "/cowrie/cowrie-git/etc/", "mode": "rw"},
                 },
                 environment={
-                    "HONEYPOT_NAME": "cowrie-prod"
+                    "HONEYPOT_NAME": os.environ.get("HONEYPOT_NAME", "cowrie")
                 },
             )
             logger.info(f"Successfully created Cowrie container ID: {self.cowrie_container.id}")
