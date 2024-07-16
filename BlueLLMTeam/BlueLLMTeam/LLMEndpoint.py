@@ -78,6 +78,11 @@ class ChatGPTEndpoint(LLMEndpointBase):
                 {"role": "user", "content": f"{prompt_dict['user']} {prompt_dict['context']} {prompt_dict['message']}"}
             ]
 
+            if prompt_dict.get("json_format", False):
+                response_format = { "type": "json_object" }
+            else:
+                response_format = {"type":"text"}
+
             # Make a request to the OpenAI API
             token_limit = min(self.token_limit, prompt_dict.get("max_tokens", self.token_limit))
             with self.get_random_lock():
@@ -85,6 +90,7 @@ class ChatGPTEndpoint(LLMEndpointBase):
                     model=prompt_dict.get("model", "gpt-3.5-turbo"),  # Specify the model you want to use
                     messages=inputmessages,
                     max_tokens=token_limit,
+                    response_format=response_format,
                 )
             data_promts_endpoint.send_json(data_dict=prompt_dict, outputContent=response.choices[0].message.content)
             return response.choices[0].message

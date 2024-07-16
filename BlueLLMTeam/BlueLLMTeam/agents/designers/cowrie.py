@@ -1,4 +1,5 @@
 import os
+import json
 import time
 import shutil
 import docker
@@ -12,6 +13,7 @@ from BlueLLMTeam.Honeypot.createFiles import generate_file_system, generate_rand
 from BlueLLMTeam.Honeypot.createfs import pickledir
 from BlueLLMTeam.agents.designers.cmd import CowrieCommandDesigner
 from BlueLLMTeam.agents.designers.fs import copy_local_filenames
+import BlueLLMTeam.PromptDict as prompt
 
 
 HONEYPOT_FS = ROOT_DIR / "Honeypot/tmpfs"
@@ -44,6 +46,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         self.fake_fs = self.honeypot_data / "honeyfs"
         self.pickle_fs = self.honeypot_data / "picklefs"
         self.txtcmds = self.honeypot_data / "txtcmds"
+        self.honey_etc = self.honeypot_data / "etc"
 
         # Honeypot settings
         self.honeypot_description = honeypot_description
@@ -124,7 +127,27 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         """
         Set some basic configurations for cowrie
         """
-        pass
+        keys = [
+            "hostname",
+            "ssh_version",
+            "version",
+            "kernel_version",
+            "kernel_build_string",
+            "hardware_platform",
+            "operating_system",
+        ]
+        json_response = self.llm.ask(
+            prompt_dict=prompt.cowrie_configuration_creator({"keys": keys})
+        ).content
+
+        json_data = json.loads(json_response)
+
+        self.honey_etc.mkdir(parents=True, exist_ok=True)
+        with open(self.honey_etc / "cowrie.cfg", "w") as f:
+            for key in keys:
+                if key not in json_data:
+                    continue
+                f.write(f"{key} = {json_data[key]}\n")
 
     def create_fake_filesystem(self):
         """
@@ -224,3 +247,10 @@ class CowrieDesignerRole(HoneypotDesignerRole):
 
         # Pickle
         pickledir(self.pickle_fs, self.depth, self.honeypot_data / "custom.pickle")
+
+
+if __name__ == "__main__":
+    from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
+    llm = ChatGPTEndpoint()
+    d = CowrieDesignerRole(llm, "")
+    d.configure_cowrie()
