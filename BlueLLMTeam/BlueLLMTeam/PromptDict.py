@@ -97,7 +97,7 @@ def csv_advisor(file_path):
         "context": "File Path: " + file_path + "\n",
         "message":"Task: Provide a list of a minimum of 10 and a max of 20 questions to ask yourself about what information to write about. The questions need to be relevant to the current file path and company information.",
         "model" : "gpt-3.5-turbo-0125",
-        "max_tokens": 4096
+        "max_tokens": 4096,
     }
     return (prompt_dict)
 
@@ -109,7 +109,7 @@ def csv_header(questions):
          what kind of information should go into this file. Remember you're an employee for this company creating a text file and all you have to go off is the file path. \n",
         "context": "Questions: " + questions + "\n\n",
         "message":"Task: Write a csv file and only provide csv headers. Do not provide any other feedback. The csv only contains headers, but based on the context of the questions given, everything needs to relate to something quantifiable or extremely qualititative such as a rating or index. You don't need to list each column as a question. \n\
-            Step1: Evaluate the information given from the questions segment. \n \
+            Step1:  the information given from the questions segment. \n \
             Step2: Generate headers that make sense from the questions given with at least 5 columns up to 20. Headers for the csv should be expecting information below with short descriptions and mostly quantifiable data. For example # of [product] or quality rating of [product].\n \
             Step3: Provide the content in a comma separated value format. Do not comment, do not provide additional context afterwards, I only want csv formatted information.",
         "model" : "gpt-3.5-turbo-0125",
@@ -125,7 +125,7 @@ def csv_writer(headers):
          what kind of information should go into this file. Remember you're an employee for this company creating a text file and all you have to go off is the file path. \n",
         "context": "Headers: " + str(headers) + "\n\n",
         "message":"Task: return only headers in the csv, but everything needs to relate to something quantifiable or extremely qualititative such as a rating or index. You don't need to list each column as a question. \n\
-            Step1: Evaluate the information given from the headers and company information. \n \
+            Step1:  the information given from the headers and company information. \n \
             Step2: Generate contents that make sense from the headers given rows should contain numbers and qualitative data such as ratings of good or bad, steer away from descriptions. \n \
             Step3: Return only csv rows which align with the provided headers. I want at least 20 rows. Do not comment, do not provide additional context afterwards, I only want csv formatted information.",
         "model" : "gpt-3.5-turbo-0125",
@@ -141,7 +141,7 @@ def csv_appender(headers, previous_content):
         "context": "Headers: " + str(headers) + "\n\n\
                     Previous Content: " + previous_content,
         "message":"Task: provide rows for a csv, but everything needs to relate to something quantifiable or extremely qualititative such as a rating or index. \n\
-            Step1: Evaluate the information given from the questions segment. \n \
+            Step1:  the information given from the questions segment. \n \
             Step2: Generate rows that make sense from the provided 'Previous Content' and 'Headers' \n \
             Step3: Return only csv rows which align with the 'Headers' content given. DO NOT PROVIDE THE HEADERS AS YOUR RESPONSE. I want at least 20 rows.  Do not comment, do not provide additional context afterwards, I only want csv formatted information.",
         "model" : "gpt-3.5-turbo-0125",
@@ -162,13 +162,127 @@ def generate_prompt():
     }
     return (prompt_dict)
 
-
-def file_system_creator(tokens: dict[str, str]) -> dict[str, str]:
-    return {
-        "systemRole": f"You are Linux expert at a company with the following information {company_info}. Please advise on the folder contents of the folders of a honeypot that is to be deployed to fool attackers. A folder should be prefixed with an # and all files should have an extension. You should only answer with one folder/file per line and nothing else.\n# Example output\n# private\n# public\nsecrets.txt",
-        "user": "Expert Linux user at the company",
-        "context": f"The current file system that you should implement is a honeypot with the following description:\n{tokens['HONEY_DESCRIPTION']}\nPlease give your answers with this in mind.",
-        "message": f"What contents can be found in {tokens['PATH']}? Make sure to provide realistic examples that could fool a human attacker. Prefix ONLY folders with a #. Files are listed as is. Folders should not have an extension.",
+#File system lead initiial conversation
+def file_system_lead():
+    prompt_dict = {
+        "systemRole": "You're a project manager. Your job is to ensure the creation of a robust file system for the following company information. \n \n Copmany Info:" + str(company_info) + "\n\n \
+            Provide an interpreatable file structure that a coder will be able to look at and turn into python code to create the files.",
+        "user": "You're a project manager. Your job is to ensure the creation of a robust file system for the following company information. \n \n Company Info:" + str(company_info) + "\n\n",
+        "context": "Research the size of that company then make sure the size of the company has an appropriate folder and file structure. If it's 100 or less it may only need 20 folders, but if it's much larger it's going to need at least 50 folders. Provide files as well. ",
+        "message": "Task: Create an initial scope of what files and folders need to be included. Write out what needs to happen in a detailed line item. Include the file names and folders. Make sure it makes sense for a real company. Do not use obvious names. Research the company and put relevant information. Do not put normal entries. Example output: -Primary Folder \n  -SubFolder \n -Subfolder \n         -Subfolder. Take your time \n Step2: Outline that at least one folder needs to contain a website with a unique folder name for the website such as the company name and some randomly generated cool name. Outline the website project and what files and configurations need to be included. The website should be based around node js. Make sure all regions include files for specific cities, states, counties, or prefectures rather than an entire geograpic region. List very specific places. Do not just provide africa, asia etc...",
         "model" : "gpt-3.5-turbo-0125",
+        "max_tokens": 4096,
+        "json_format":False,
     }
+    return (prompt_dict)
+
+#File system lead initiial conversation
+def file_system_enhancer(file_structure):
+    prompt_dict = {
+        "systemRole": "You are a file system architect. You need to revise the file and folder structure you've been given. Research the following company:  \n \n Company Info:" + str(company_info) + "\n\n \
+            Provide an interpreatable file structure that a coder will be able to look at and turn into python code to create the files.",
+        "user": "You need to send back a more robust file system with a deeply nested network system with a large variety of files. Create file and folder structures for websites, cost estimates, customer information, employee information, and anything with highly sensitive information.",
+        "context": "Research the size of that company then make sure the size of the company has an appropriate folder and file structure. If it's 100 or less it may only need 20 folders, but if it's much larger it's going to need at least 50 folders. Provide files as well. Here's the previous file structure, if blank then this is the initial startup the file structure \n File Structure:" + str(file_structure),
+        "message": "Task: Enhance the file system you were given with the context provided earlier. Make sure to provide extremely sensitive looking information. Take your time to think before answering. \n \n Step 1: Review the existing content of the folder structure \n \n Step 2: Make sure no files or folders are labeled obvious names including sensitive information. Step 3: Do not use generic names for anything. Replace file names that say iteration, employee 1, server_config, customer, project, and replace them with names the company may use. Make up fake names using names from existing projects from history. Use historical names for employees. INCLUDE FILES THAT WILL HAVE SOCIAL SECURITY NUMBERS IN THEM \n\n Step 4: For any websites add in javascript and node js server configs. Step 5: Ensure file names do not include numerical orders, they should be dates if anything. Also do not generate folders with generic names like a or b. Use a name generator to think more creatively like project. Ensure folder and file names are using specific cities, counties, states, countries, but not too broad of regions. Avoid saying Europe, Africa, USA by themselves.  \n \n Step 6: Increase the complexity and add new and more in depth levels to the file and folder structure. \n",
+        "model" : "gpt-3.5-turbo-0125",
+        "max_tokens": 4096,
+        "json_format":False,
+    }
+    return (prompt_dict)
+
+#File system lead conversation and internal dialogue.
+def file_system_employee(file_structure):
+    schema = """
+{
+    "top_folder": {
+        "subfolder_1": {
+            "subfolder_1_1": {
+                "file_1": "",
+                "file_2": "",
+                "subfolder_1_1_1": {
+                    "file_1": "",
+                    "file_2": ""
+                }
+            }
+        },
+        "subfolder_2": {
+            "subfolder_2_1": {
+                "file_1": "",
+                "file_2": "",
+                "file_3": "",
+                "subfolder_2_1_1": {
+                    "file_1": "",
+                    "file_2": ""
+                }
+            },
+            "subfolder_2_2": {
+                "file_1": "",
+                "subfolder_2_2_1": {
+                    "file_1": "",
+                    "file_2": ""
+                },
+                "file_2": "",
+                "subfolder_2_2_2": {
+                    "file_1": "",
+                    "file_2": "",
+                    "file_3": ""
+                }
+            }
+        },
+        "subfolder_3": {
+            "subfolder_3_1": {
+                "file_1": "",
+                "subfolder_3_1_1": {
+                    "file_1": "",
+                    "file_2": ""
+                }
+            },
+            "subfolder_3_2": {
+                "file_1": "",
+                "file_2": "",
+                "subfolder_3_2_1": {
+                    "file_1": "",
+                    "file_2": ""
+                }
+            },
+            "subfolder_3_3": {
+                "file_1": "",
+                "file_2": "",
+                "subfolder_3_3_1": {
+                    "file_1": "",
+                    "file_2": ""
+                }
+            }
+        },
+        "file_1": "",
+        "file_2": ""
+    }
+}
+"""
+
+    prompt_dict = {
+        "systemRole": "You've just been hired by the following compnay: \n \n Copmany Info:" + str(company_info) + "\n\n " + "The file structure is: " + str(file_structure),
+        "user": "You have been given a file structure from your boss you need to generate the python code to create all the folders and it's subfolders.",
+        "context": "Make sure to also create the files as well.",
+        "message": "You will provide a json, make sure all files have extensions. Provide only a json in this format: ' " + schema,
+        "model" : "gpt-3.5-turbo-0125",
+        "max_tokens": 4096,
+        "json_format":True,
+    }
+    return (prompt_dict)
+
+#File system lead conversation and internal dialogue.
+def file_contents_employee(file_structure, file):
+    
+    prompt_dict = {
+        "systemRole": "You've just been hired by the following compnay: \n \n Copmany Info:" + str(company_info) + "\n\n " + "The file structure is: " + str(file_structure),
+        "user": "You have been given a file and a file structure. File: " + str(file) + "\n \n Here's the file structure: " + str(file_structure),
+        "context": "Generate useful content for the file. Do not use generic naming. Do not say meeting_1. Use names from different countries. Make the contents unique. Ensuer the file contents are thorough. \n",
+        "message": "Provide only the file contents. If the file is a png, jpg or image file type then return an image based on the file name and where it exists in the structure. Otherwise generate appropriate content. Only return file contents no comments or anything else. \n \n Task: Generate file contents following the guidelines given. \n \n Step 1: Evaluate the file name. Step 2: Look at the file extension so .xlsx or .docx whatever the file extension is and use that to determine the file format based off the of the extension. \n Step 3: Look and see where in the file structure it resides. \n Step 4: Think hard about the information you might find in a company's file. Provide client specific information. Do not space general regions state exact cities in those regions. Do not use plenty of jargon. Any files with employee information should contain social security numbers in the format of xxx-xx-xxxx. \n Step 5: Review the content think hard. Use historical names. If mentioning places, mention real places. No finances or revenue should be a perfect number, it should have odd values. If it's expenses provide the name of real companies and places along with the items purchased and the cost. In the websites, make sure to provide robust website programming using cards and more. \n Step 5: Review the files and ensure no 12345 numbers are being used. Make sure to include fake social security numbers for employee documents in the format of ###-##-####.  \n Step 6: Write the contents provide nothing else beyond that.",
+        "model" : "gpt-3.5-turbo-0125",
+        "max_tokens": 4096,
+        "json_format":False,
+    }
+    return (prompt_dict)
+
 
