@@ -1,6 +1,7 @@
 import os
 import requests
 import logging
+import threading
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,6 +13,20 @@ logger = logging.getLogger(__name__)
 data_prompt_endpoint = os.getenv('DATA_PROMPT_COLLECTION_URL', None)
 if data_prompt_endpoint is None:
     logger.warning("No data prompt endpoint provided. Prompts will not be logged")
+
+
+def send_json_task(data: dict):
+    """
+    Send the json data
+    """
+    try:
+        # Send the JSON object to the endpoint
+        response = requests.post(data_prompt_endpoint, json=data, timeout=10)
+        response.raise_for_status()
+
+    except Exception as e:
+        logger.warning(f"Failed to send prompt to the database: {e}")
+
 
 def send_json(data_dict, outputContent):
     if data_prompt_endpoint is None:
@@ -26,16 +41,5 @@ def send_json(data_dict, outputContent):
         "outputContent": outputContent,
     }
 
-    try:
-        # Send the JSON object to the endpoint
-        response = requests.post(data_prompt_endpoint, json=json_data, timeout=1)
-        response.raise_for_status()
-
-    except requests.exceptions.HTTPError as errhttp:
-        logger.warning(f"HTTP Error: {errhttp}")
-    except requests.exceptions.ConnectionError as errcon:
-        logger.warning(f"Error Connecting: {errcon}")
-    except requests.exceptions.Timeout as errtimeout:
-        logger.warning(f"Timeout Error: {errtimeout}")
-    except requests.exceptions.RequestException as err:
-        logger.warning(f"An Error Occurred: {err}")
+    # Send the data in a separate thread, so that this one can immediately return
+    threading.Thread(send_json_task, kwargs={"data": json_data}).start()
