@@ -2,10 +2,10 @@ import time
 import json
 import logging
 
-from BlueLLMTeam.RoleAgent import CowrieAnalystRole, CowrieDesignerRole
+from BlueLLMTeam.agents import CowrieAnalystRole
 from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
 from BlueLLMTeam.banner import LLM_ANALYST
-from BlueLLMTeam.db_interaction import get_logs_from_session, update_session_status, get_updated_sessions
+from BlueLLMTeam.database.db_interaction import get_logs_from_session, update_session_status, get_updated_sessions
 
 
 logger = logging.getLogger(__name__)
@@ -41,8 +41,8 @@ def monitor_logs(frequency: float, verbosity: int = 0):
     print("Ready to analyse attackers. Waiting for connections...")
 
     prev_time = time.time_ns()
-    try:
-        while True:
+    while True:
+        try:
             # Sleep until next loop
             curr_time = time.time_ns()
             exec_time = (curr_time - prev_time) / 1e9
@@ -61,32 +61,13 @@ def monitor_logs(frequency: float, verbosity: int = 0):
 
             for session_id in sessions:
                 analyze_session(session_id, analyst)
-    except KeyboardInterrupt:
-        print("User interrupted main thread. Terminating program...")
-
-
-def update_logs(frequency: float, designers: list[CowrieDesignerRole], verbosity: int = 0):
-    prev_time = time.time_ns()
-    while True:
-        # Sleep until next loop
-        curr_time = time.time_ns()
-        exec_time = (curr_time - prev_time) / 1e9
-        sleep_time = 1 / frequency - exec_time
-        prev_time = curr_time
-
-        if sleep_time > 0:
-            if verbosity > 3:
-                print(f"Sleeping for {sleep_time} seconds")
-            time.sleep(sleep_time)
-
-        stopped = 0
-        for designer in designers:
-            if designer.container_running():
-                designer.update_logs()
-            else:
-                stopped += 1
-        if stopped == len(designers):
+        except KeyboardInterrupt:
+            logger.info("User interrupted main thread. Terminating program...")
             break
+        except Exception as e:
+            logger.warning(f"Error when analyzing the logs: {e}")
+            pass
+
 
 if __name__ == "__main__":
     monitor_logs(frequency=10, verbosity=0)

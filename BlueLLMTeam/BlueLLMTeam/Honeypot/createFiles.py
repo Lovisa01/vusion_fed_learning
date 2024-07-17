@@ -5,26 +5,11 @@ from pathlib import Path
 import threading
 import logging
 from tqdm import tqdm
-from typing import Callable, Iterable, Mapping, Any
 
 from BlueLLMTeam import PromptDict as prompt
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase, ChatGPTEndpoint
 from BlueLLMTeam.Honeypot import AddContents
-
-
-class ThreadWithReturnValue(threading.Thread):
-    
-    def __init__(self, group: None = None, target: Callable[..., object] | None = None, name: str | None = None, args: Iterable[Any] = [], kwargs: Mapping[str, Any] | None = None, *, daemon: bool | None = None) -> None:
-        threading.Thread.__init__(self, group, target, name, args, kwargs, daemon=daemon)
-        self._return = None
-
-    def run(self):
-        if self._target is not None:
-            self._return = self._target(*self._args, **self._kwargs)
-
-    def join(self, *args):
-        threading.Thread.join(self, *args)
-        return self._return
+from BlueLLMTeam.utils.threading import ThreadWithReturnValue
 
 
 logger = logging.getLogger(__name__)
