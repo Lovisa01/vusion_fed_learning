@@ -1,13 +1,10 @@
 import requests
 import json
 import os
-import time
 from dotenv import load_dotenv
-import pandas as pd
 
 # Load environment variables
-dotenv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '.env'))
-load_dotenv(dotenv_path)
+load_dotenv()
 
 # Get the API key from the environment variable
 API_KEY_COWRIE = os.getenv('MONGO_API_KEY_COWRIE')
