@@ -3,6 +3,7 @@ import json
 import os
 import time
 from dotenv import load_dotenv
+import pandas as pd
 
 # Load environment variables
 dotenv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '.env'))
@@ -24,8 +25,8 @@ Use getcowriepage to get the cowriepage contents.
 
 def getcowriepage(limit, skip):
     payload = json.dumps({
-        "collection": "CowrieLogs",  # Replace with your collection name
-        "database": "CowrieLogs",   # Replace with your database name
+        "collection": "CowrieLogs",
+        "database": "CowrieLogs",
         "dataSource": "CowrieLogs",   # Replace with your data source name
         "filter": {},  # Empty filter to match all documents
         "limit": limit,
@@ -48,9 +49,9 @@ Use getpromptpage to get the prompts contents.
 
 def getpromptpage(limit, skip):
     payload = json.dumps({
-        "collection": "CowrieLogs",  # Replace with your collection name
-        "database": "CowrieLogDB",   # Replace with your database name
-        "dataSource": "CowrieLogs",   # Replace with your data source name
+        "collection": "PromptLog",  # Replace with your collection name
+        "database": "PromptLog",   # Replace with your database name
+        "dataSource": "PromptLog",   # Replace with your data source name
         "filter": {},  # Empty filter to match all documents
         "limit": limit,
         "skip": skip
@@ -87,9 +88,9 @@ def insert_prompt(systemRole,user,context,message,outputContent):
     url = COLLECTION_URL_PROMPT + "insertOne"
     #Required format for inserting prompts
     payload = json.dumps({
-        "collection": "CowrieLogs",
-        "database": "CowrieLogs",
-        "dataSource": "CowrieLogs",
+        "collection": "PromptLog",  # Replace with your collection name
+        "database": "PromptLog",   # Replace with your database name
+        "dataSource": "PromptLog", 
         "document":  { 
             "role": systemRole,
             "user": user,
@@ -137,5 +138,28 @@ def insert_log(session_id, isAnalysed, src_ip, time_stamp, honeypot_name):
     print(response)
     return response
 
-insert_log("test",True,"test", "test", "test")
+def insert_logs(document):
+    url = COLLECTION_URL_COWRIE + "insertMany"
+    #Required format for inserting prompts
+    payload = json.dumps({
+        "collection": "CowrieLogs",
+        "database": "CowrieLogs",
+        "dataSource": "CowrieLogs",
+        "documents":   document
+        
+    })
+    headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Request-Headers': '*',
+        'api-key': API_KEY_COWRIE,
+    }
+    #return to verify it provides an actual input
+    response = requests.post(url, headers=headers, data=payload)
+    print(response)
+    return response
 
+#EXAMPLE USAGE
+#insert_prompt("test",True,"test", "test", "test") INSERT DATA INTO PROMPTS
+#print(getalldata(getpromptpage)) GET DATA FROM PROMPTS
+#insert_log("test",True,"test", "test", "test") INSERT DATA INTO COWRIE
+#getalldata(getcowriepage)) GET DATA FROM CORWRIE LOGS
