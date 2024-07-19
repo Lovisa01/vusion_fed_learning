@@ -236,15 +236,3 @@ def split_chained_commands(commands: pd.DataFrame) -> pd.DataFrame:
     expanded_commands = commands["input_cmd"].str.split(regex, regex=True)
     return commands.assign(input_cmd=expanded_commands).explode("input_cmd", ignore_index=True)
 
-
-if __name__ == "__main__":
-    # Add a new record
-    # add_log(
-    #     "simon-mongo-test2",
-    #     "420.666.13.1",
-    #     "2024-07-11T15:55:00Z",
-    #     "simon-mongo-test",
-    #     "mkdir simon-is-best",
-    # )
-    print(get_all_items("CowrieLogs").head(20))
-    # print(get_updated_sessions())
