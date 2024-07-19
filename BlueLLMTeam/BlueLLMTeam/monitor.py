@@ -17,12 +17,13 @@ def analyze_session(df: pd.DataFrame, analyst: CowrieAnalystRole) -> None:
     Analyze the logs from a session
     """
     # Sort the commands in the DataFrame
-    sorted_commands = list(df.sort_values(by="time_stamp")["commands"])
+    sorted_commands = list(df.sort_values(by="time_stamp")["command"])
     print("##### Analyzing the following logs #####")
-    print(sorted_commands)
+    logs_to_analyze = "\n".join(sorted_commands)
+    print(logs_to_analyze)
     print("########################################")
     print("\nThinking...")
-    response = analyst.analyse_logs("\n".join(sorted_commands))
+    response = analyst.analyse_logs(logs_to_analyze)
     print("##### Analyst result #####")
     print(response)
     print("##########################")
@@ -54,7 +55,7 @@ def monitor_logs(frequency: float, verbosity: int = 0):
 
             # Get updated sessions
             df = get_updated_sessions()
-            if not df:
+            if df.empty:
                 continue
             
             sessions = set(df["session_id"])
