@@ -8,7 +8,7 @@ from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
 from BlueLLMTeam.agents.base import AgentRoleBase
 from BlueLLMTeam.utils.threading import ThreadWithReturnValue
 from BlueLLMTeam.utils.path import conf as get_configuration_file
-from BlueLLMTeam.database.db_interaction import fetch_all_session_logs
+from BlueLLMTeam.database.db_interaction import get_all_items, split_chained_commands
 
 
 logger = logging.getLogger(__file__)
@@ -99,7 +99,7 @@ class CommandDesigner(AgentRoleBase):
             tokens = {
                 "command": cmd,
             }
-            response = self.llm.ask(prompt.linux_command_response(tokens)).content
+            response = self.llm.ask(prompt.linux_command_response(tokens))
         except Exception as e:
             logger.warning(f"Failed to generate response for command {cmd}: {e}")
             response = None
@@ -118,8 +118,9 @@ class CowrieCommandDesigner(CommandDesigner):
         return set(get_configuration_file("cowrie_commands.txt").read_text().split())
     
     def load_seen_commands(self) -> dict[str, int]:
-        logs = fetch_all_session_logs(save_local_cache=True, split_commands=True)
-        return logs["input_cmd"].value_counts().to_dict()
+        logs = get_all_items(destination="CowrieLogs")
+        logs = split_chained_commands(logs)
+        return logs["command"].value_counts().to_dict()
 
     def freq_unknown_commands(self) -> dict[str, int]:
         freq_unknown = super().freq_unknown_commands()

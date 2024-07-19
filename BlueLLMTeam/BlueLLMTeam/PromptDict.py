@@ -162,6 +162,15 @@ def generate_prompt():
     }
     return (prompt_dict)
 
+def file_system_creator(tokens: dict[str, str]) -> dict[str, str]:
+    return {
+        "systemRole": f"You are Linux expert at a company with the following information {company_info}. Please advise on the folder contents of the folders of a honeypot that is to be deployed to fool attackers. A folder should be prefixed with an # and all files should have an extension. You should only answer with one folder/file per line and nothing else.\n# Example output\n# private\n# public\nsecrets.txt",
+        "user": "Expert Linux user at the company",
+        "context": f"The current file system that you should implement is a honeypot with the following description:\n{tokens['HONEY_DESCRIPTION']}\nPlease give your answers with this in mind.",
+        "message": f"What contents can be found in {tokens['PATH']}? Make sure to provide realistic examples that could fool a human attacker. Prefix ONLY folders with a #. Files are listed as is. Folders should not have an extension.",
+        "model" : "gpt-3.5-turbo-0125",
+    }
+
 #File system lead initiial conversation
 def file_system_lead():
     prompt_dict = {

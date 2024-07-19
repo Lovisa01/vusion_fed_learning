@@ -188,7 +188,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         }
         json_response = self.llm.ask(
             prompt_dict=prompt.cowrie_configuration_creator({"keys": options})
-        ).content
+        )
 
         # Update options with LLM response
         json_data = json.loads(json_response)
@@ -260,7 +260,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         tokens = {
             "file": file
         }
-        file_contents = self.llm.ask(prompt.linux_important_files_creator(tokens)).content
+        file_contents = self.llm.ask(prompt.linux_important_files_creator(tokens))
         
         file_path = self.fake_fs / file
         file_path.parent.mkdir(parents=True, exist_ok=True)

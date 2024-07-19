@@ -1,30 +1,28 @@
 import time
 import json
 import logging
+import pandas as pd
 
 from BlueLLMTeam.agents import CowrieAnalystRole
 from BlueLLMTeam.LLMEndpoint import ChatGPTEndpoint
 from BlueLLMTeam.banner import LLM_ANALYST
-from BlueLLMTeam.database.db_interaction import get_logs_from_session, update_session_status, get_updated_sessions
+from BlueLLMTeam.database.db_interaction import get_updated_sessions
 
 
 logger = logging.getLogger(__name__)
 
 
-def analyze_session(session_id: str, analyst: CowrieAnalystRole) -> None:
+def analyze_session(df: pd.DataFrame, analyst: CowrieAnalystRole) -> None:
     """
     Analyze the logs from a session
     """
-    logs = get_logs_from_session(session_id)
-    if not logs:
-        return
-    
-    update_session_status(session_id)
+    # Sort the commands in the DataFrame
+    sorted_commands = list(df.sort_values(by="time_stamp")["commands"])
     print("##### Analyzing the following logs #####")
-    print(logs)
+    print(sorted_commands)
     print("########################################")
     print("\nThinking...")
-    response = analyst.analyse_logs(json.dumps(logs)).content
+    response = analyst.analyse_logs("\n".join(sorted_commands))
     print("##### Analyst result #####")
     print(response)
     print("##########################")
@@ -55,12 +53,13 @@ def monitor_logs(frequency: float, verbosity: int = 0):
                 time.sleep(sleep_time)
 
             # Get updated sessions
-            sessions = get_updated_sessions()
-            if not sessions:
+            df = get_updated_sessions()
+            if not df:
                 continue
-
+            
+            sessions = set(df["session_id"])
             for session_id in sessions:
-                analyze_session(session_id, analyst)
+                analyze_session(df[df["session_id"] == session_id], analyst)
         except KeyboardInterrupt:
             logger.info("User interrupted main thread. Terminating program...")
             break

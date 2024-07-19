@@ -125,7 +125,7 @@ def generate_file_system(
         "PATH": current_folder,
     }
     prompt_dict = prompt.file_system_creator(tokens)
-    response: str = llm.ask(prompt_dict).content
+    response: str = llm.ask(prompt_dict)
 
     new_folder_contents = response.split("\n")
 

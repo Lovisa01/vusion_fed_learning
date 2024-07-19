@@ -68,7 +68,7 @@ Based on the company information provided and the available honeypots, generate 
             response = self.llm.ask(prompt_dict)
             # Parse out markdown list of honeypots from the LLM response
             try:
-                honeypot_list = extract_markdown_list(response.content)
+                honeypot_list = extract_markdown_list(response)
             except:
                 logger.warning(f"Could not parse list from LLM response")
                 continue
@@ -133,7 +133,7 @@ Generate a list with {COUNT} honeypots.
             }
             honeypot_descriptions = []
             for _ in range(retries):
-                response = self.llm.ask(prompt_dict).content
+                response = self.llm.ask(prompt_dict)
                 try:
                     json_data = extract_json_from_text(response)
                 except ValueError:

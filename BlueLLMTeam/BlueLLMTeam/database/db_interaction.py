@@ -2,178 +2,229 @@ import os
 import requests
 import logging
 import json
-import aiohttp
-import asyncio
 import pandas as pd
-from pathlib import Path
 from tqdm import trange, tqdm
 
 from dotenv import load_dotenv
 
+from threading import Thread
+from BlueLLMTeam.utils.threading import ThreadWithReturnValue
+
 
 load_dotenv()
-BACKEND_IP = os.environ.get("BACKEND_IP")
-BACKEND_PORT = os.environ.get("BACKEND_PORT")
+API_KEY_COWRIE = os.getenv('MONGO_API_KEY_COWRIE')
+COLLECTION_URL_COWRIE = os.getenv('COLLECTION_URL_COWRIE')
+API_KEY_PROMPT = os.getenv('MONGO_API_KEY_PROMPT')
+COLLECTION_URL_PROMPT = os.getenv('COLLECTION_URL_PROMPT')
 
-LOGS_ENDPOINT = f"http://{BACKEND_IP}:{BACKEND_PORT}/logs"
-ANALYZE_ENDPOINT = f"http://{BACKEND_IP}:{BACKEND_PORT}/analyse/logs"
-ANALYZE_DONE_ENDPOINT = f"http://{BACKEND_IP}:{BACKEND_PORT}/logs/analyse"
+PAGE_COUNT = 5000
 
 logger = logging.getLogger(__name__)
 
-LOCAL_LOG_DB_CACHE = Path(__file__).parent / "cache" / "logs.csv"
+
+def send_payload(payload: dict, destination: str, endpoint: str) -> requests.Response:
+    """
+    Build the payload
+    """
+    headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Request-Headers': '*',
+    }
+    if destination == "CowrieLogs":
+        url = COLLECTION_URL_COWRIE + endpoint
+        headers["api-key"] = API_KEY_COWRIE
+    elif destination == "PromptLog":
+        url = COLLECTION_URL_PROMPT + endpoint
+        headers["api-key"] = API_KEY_PROMPT
+    else:
+        raise ValueError(f"Destination {destination} is not valid")
+    
+    _payload = {
+        "collection": destination,
+        "database": destination,
+        "dataSource": destination,
+    }
+    _payload.update(payload)
+    response = requests.post(url, headers=headers, data=json.dumps(_payload))
+
+    # Log
+    if not response.ok:
+        logger.warning(f"Failed to send payload to {destination}: {response.text}")
+
+    return response
 
 
-def add_log(log_record: dict) -> bool:
+def add_log(
+        session_id: str,
+        src_ip: str,
+        time_stamp: str,
+        honeypot_name: str,
+        command: str,
+) -> bool:
     """
     Add a log record to the database
     """
-    data = json.dumps(log_record)
-    headers = {
-        'Content-Type': 'application/json'
+    document = {
+        "document": {
+            "session_id": session_id,
+            "src_ip": src_ip,
+            "time_stamp": time_stamp,
+            "honeypot_name": honeypot_name,
+            "command": command,
+            "response": "",
+            "isAnalyzed": False,
+        }
     }
-    response = requests.post(LOGS_ENDPOINT, data=data, headers=headers)
+    response = send_payload(document, "CowrieLogs", "insertOne")
     return response.ok
 
 
-def get_all_sessions() -> set[str]:
+def add_prompt(
+        system_role: str,
+        user: str,
+        context: str,
+        message: str,
+        output: str,
+        wait: bool = True,
+) -> bool:
     """
-    Get all sessions
+    Add a prompt to the database
     """
-    response = requests.get(LOGS_ENDPOINT)
-    if not response.status_code == 200:
+    document = {
+        "document":  { 
+            "role": system_role,
+            "user": user,
+            "contentType": context,
+            "prompt": message,
+            "outputContent": output,
+        }
+    }
+    kwargs = {
+        "payload": document,
+        "destination": "PromptLog",
+        "endpoint": "insertOne",
+    }
+    if not wait:
+        Thread(target=send_payload, kwargs=kwargs).start()
+        return True
+    response = send_payload(**kwargs)
+    return response.ok
+
+
+def get_item_count(destination: str) -> bool:
+    """
+    Get the total number of logs in the database
+    """
+    task = {
+        "pipeline": [
+            {"$count": "total"}
+        ]
+    }
+    response = send_payload(task, destination, "aggregate")
+    
+    if response.status_code == 200:
+        data = response.json()
+        if data.get('documents'):
+            return data['documents'][0]['total']
+        else:
+            return 0
+    else:
+        logger.warning(f"Failed to get the record count: {response.status_code}, {response.text}")
+        return None
+
+
+def get_page(
+        page: int,
+        destination: str,
+        content_filter: dict = {},
+    ) -> list[dict]:
+    """
+    Get a page from the destination
+    If a filter is provided the items will be filtered before being returned
+    """
+    payload = {
+        "filter": content_filter,
+        "limit": PAGE_COUNT,
+        "skip": PAGE_COUNT * page,
+    }
+    response = send_payload(payload, destination, "find")
+    documents = response.json()
+    return documents.get("documents", [])
+
+
+def get_all_items(destination: str, content_filter: dict = {}) -> pd.DataFrame:
+    """
+    Get all items from the database
+    """
+    count = get_item_count("CowrieLogs")
+    if count is None:
         return []
-    data = response.json()
-    sessions = set([item["session_id"] for item in data.get('data', {}).get('Items', [])])
-    return sessions
+    
+    pages = count // PAGE_COUNT + 1
+    
+    def wrapper(page: int, pbar: tqdm) -> list[dict]:
+        r = get_page(
+            page=page,
+            destination=destination,
+            content_filter=content_filter,
+        )
+        pbar.update()
+        return r
+
+    threads: list[ThreadWithReturnValue] = []
+    with trange(pages, desc="Retrieving all logs", leave=False) as pbar:
+        for page in range(pages):
+            kwargs = {
+                "page": page,
+                "pbar": pbar,
+            }
+            t = ThreadWithReturnValue(target=wrapper, kwargs=kwargs)
+            threads.append(t)
+    
+        for t in threads:
+            t.start()
+        
+        logs = []
+        for t in threads:
+            r = t.join()
+            logs.extend(r)
+
+    return pd.DataFrame(logs)
 
 
-def get_updated_sessions() -> list[str]:
+def update_items(destination: str, filter_criteria: dict, update_values: dict):
+    """
+    Update multiple items in the database
+    """
+    payload = {
+        "filter": filter_criteria,
+        "update": {"$set": update_values}
+    }
+    response = send_payload(payload, destination, "updateMany")
+    if not response.ok:
+        logger.warning(f"Did not update items correctly: {response.text}")
+
+
+def get_updated_sessions() -> pd.DataFrame:
     """
     Get all sessions that have been updated
     """
     # Get logs
-    response = requests.get(ANALYZE_ENDPOINT)
+    is_analyzed_filter = {"isAnalyzed": False}
+    new_logs = get_all_items("CowrieLogs", is_analyzed_filter)
 
-    # Do some error checking on the response
-    if not response.ok:
-        logger.warning(f"Failed to retrieve updated sessions. Got status code {response.status_code} with response {response.content}")
-        return []
-    response_data = response.json()
-    if "success" not in response_data:
-        logger.warning(f"Response missing success key when retrieving updated sessions")
-        return []
+    # Sort out all new sessions
+    if "session_id" not in new_logs:
+        return pd.DataFrame([])
     
-    # Extract session ids
-    sessions = []
-    try:
-        items = response_data["data"]["Items"]
-        for item in items:
-            sessions.append(item["session_id"])
-    except KeyError as e:
-        logger.warning(f"Missing key in response: {e}")
-        return []
-    
-    return sessions
+    session_ids = list(set(new_logs["session_id"]))
+    session_filter = {"session_id": {"$in": session_ids}}
 
+    # Set all items in the sessions to Analyzed
+    update_items("CowrieLogs", session_filter, {"isAnalyzed": True})
 
-def get_logs_from_session(session_id: str) -> list[dict]:
-    """
-    Get the logs from a session
-    """
-    url = f"{LOGS_ENDPOINT}/{session_id}"
-    response = requests.get(url)
-
-    # Extract logs
-    if not response.ok:
-        logger.warning(f"Failed to get logs from session {session_id}. Got status code {response.status_code} with response {response.content}")
-        return []
-    return response.json()
-
-
-def update_session_status(session_id: str) -> bool:
-    """
-    Tell the server we will be analyzing the logs
-    """
-    url = f"{ANALYZE_DONE_ENDPOINT}/{session_id}"
-    response = requests.put(url)
-    return response.ok
-
-
-async def get_session_logs(http_session: aiohttp.ClientSession, session_id: str, pbar: tqdm) -> tuple[str, list]:
-    url = f"{LOGS_ENDPOINT}/{session_id}"
-    try:
-        async with http_session.get(url) as response:
-            data = await response.json()
-            pbar.update()
-            return session_id, data
-    except Exception:
-        return session_id, None
-    
-
-async def get_all_session_logs(sessions: set[str], pbar: tqdm):
-    async with aiohttp.ClientSession() as session:
-            tasks = [get_session_logs(session, session_id, pbar) for session_id in sessions]
-            results = await asyncio.gather(*tasks)
-        
-    data = []
-    for session_id, interactions in results:
-        if interactions is None:
-            logger.warning(f"Failed to retrieve logs from session {session_id}")
-            continue
-        data.extend(interactions)
-
-    return pd.DataFrame(data)
-    
-
-def fetch_all_session_logs(
-        honeypot_names: list[str] = None, 
-        save_local_cache: bool = False, 
-        split_commands: bool = False,
-        session_ids: list[str] = None,
-        blacklist_ips: list[str] = [],
-    ) -> pd.DataFrame:
-    if session_ids is None:
-        session_ids = get_all_sessions()
-
-    # Load local logs from cache
-    if LOCAL_LOG_DB_CACHE.exists():
-        local_cache = pd.read_csv(LOCAL_LOG_DB_CACHE)
-        # Remove sessions already in the database
-        session_ids = session_ids - set(local_cache["session_id"])
-    else:
-        local_cache = None
-    
-    if len(session_ids) > 0:
-        with trange(len(session_ids), desc="Getting all logs from the database") as pbar:
-            new_logs = asyncio.run(get_all_session_logs(session_ids, pbar))
-    else:
-        new_logs = pd.DataFrame([])
-    
-    if local_cache is None:
-        logs = new_logs
-    else:
-        logs = pd.concat([local_cache, new_logs], ignore_index=True)
-
-
-    if save_local_cache:
-        LOCAL_LOG_DB_CACHE.parent.mkdir(exist_ok=True)
-        logs.to_csv(LOCAL_LOG_DB_CACHE, header=True, index=False)
-
-    # Filter out blacklisted IPs
-    if blacklist_ips:
-        logs = logs[~logs["src_ip"].isin(blacklist_ips)]
-
-    if split_commands:
-        logs = split_chained_commands(logs)
-
-    # Trim all strings in the database
-    logs = logs.map(lambda x: x.strip() if isinstance(x, str) else x)
-    
-    if honeypot_names is None:
-        return logs
-    
-    return logs[logs["honeypot_name"].isin(honeypot_names)]
+    # Return all logs in the sessions
+    return get_all_items("CowrieLogs", session_filter)
 
 
 def split_chained_commands(commands: pd.DataFrame) -> pd.DataFrame:
@@ -184,3 +235,4 @@ def split_chained_commands(commands: pd.DataFrame) -> pd.DataFrame:
     regex = "(?:" + "|".join(map(lambda s: s.replace("|", "\|"), chain_symbols)) + ")"
     expanded_commands = commands["input_cmd"].str.split(regex, regex=True)
     return commands.assign(input_cmd=expanded_commands).explode("input_cmd", ignore_index=True)
+
