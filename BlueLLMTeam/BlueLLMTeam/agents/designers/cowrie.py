@@ -138,9 +138,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                     self.fake_fs: {"bind": "/cowrie/cowrie-git/honeyfs/", "mode": "rw"},
                     self.honey_etc: {"bind": "/cowrie/cowrie-git/etc/", "mode": "rw"},
                 },
-                environment={
-                    "HONEYPOT_NAME": os.environ.get("HONEYPOT_NAME", "cowrie")
-                },
+                environment=os.environ, # Forward all environment variables to the docker container
             )
             logger.info(f"Successfully created Cowrie container ID: {self.cowrie_container.id}")
 
