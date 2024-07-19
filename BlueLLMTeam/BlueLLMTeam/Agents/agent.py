@@ -18,22 +18,22 @@ llm_endpoint = ChatGPTEndpoint()
 def create_file_structure(llm_endpoint: LLMEndpointBase) -> str:
     pm = prompt.file_system_lead()
     response = llm_endpoint.ask(pm)
-    return response.content
+    return response
 
 def create_file_structure_employee(file_structure, llm_endpoint: LLMEndpointBase) -> str:
     file_creator = prompt.file_system_employee(file_structure)
     response = llm_endpoint.ask(file_creator)
-    return response.content
+    return response
 
 def create_file_structure_enhance(file_structure, llm_endpoint: LLMEndpointBase) -> str:
     file_enhancer = prompt.file_system_enhancer(file_structure)
     response = llm_endpoint.ask(file_enhancer)
-    return response.content
+    return response
 
 def create_file_structure_contents(file_structure, llm_endpoint: LLMEndpointBase, file) -> str:
     file_contents = prompt.file_contents_employee(file_structure, file)
     response = llm_endpoint.ask(file_contents)
-    return response.content
+    return response
 
 
 # Function to loop through directories and write contents back to the same file

@@ -10,7 +10,7 @@ import logging
 import time
 import random
 
-from BlueLLMTeam.database import data_promts_endpoint
+from BlueLLMTeam.database.db_interaction import add_prompt
 import threading
 from random import choice
 # YOU WILL HAVE TO LOAD FROM YOUR ENVINVORNMENT FILE
@@ -92,8 +92,16 @@ class ChatGPTEndpoint(LLMEndpointBase):
                     max_tokens=token_limit,
                     response_format=response_format,
                 )
-            data_promts_endpoint.send_json(data_dict=prompt_dict, outputContent=response.choices[0].message.content)
-            return response.choices[0].message
+            output_message = response.choices[0].message.content
+            add_prompt(
+                system_role=prompt_dict["systemRole"],
+                user=prompt_dict["user"],
+                context=prompt_dict["context"],
+                message=prompt_dict["message"],
+                output=output_message,
+                wait=False,
+            )
+            return output_message
         except RateLimitError as e:
             logger.warning(f"Rate limit exceeded. Will try {max_retries - retry} more times: {e.message}")
             if retry >= max_retries:

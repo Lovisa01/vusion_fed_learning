@@ -2,15 +2,12 @@ import os
 import requests
 import logging
 import json
-import aiohttp
-import asyncio
 import pandas as pd
-from pathlib import Path
 from tqdm import trange, tqdm
-from itertools import chain
 
 from dotenv import load_dotenv
 
+from threading import Thread
 from BlueLLMTeam.utils.threading import ThreadWithReturnValue
 
 
@@ -20,20 +17,12 @@ COLLECTION_URL_COWRIE = os.getenv('COLLECTION_URL_COWRIE')
 API_KEY_PROMPT = os.getenv('MONGO_API_KEY_PROMPT')
 COLLECTION_URL_PROMPT = os.getenv('COLLECTION_URL_PROMPT')
 
-logger = logging.getLogger(__name__)
-
-LOCAL_LOG_DB_CACHE = Path(__file__).parent / "cache" / "logs.csv"
-
-MONGO_LOGS_HEADERS = {
-    'Content-Type': 'application/json',
-    'Access-Control-Request-Headers': '*',
-    'api-key': API_KEY_COWRIE,
-}
-
 PAGE_COUNT = 5000
 
+logger = logging.getLogger(__name__)
 
-def send_payload(task: dict, destination: str, endpoint: str) -> requests.Response:
+
+def send_payload(payload: dict, destination: str, endpoint: str) -> requests.Response:
     """
     Build the payload
     """
@@ -50,13 +39,18 @@ def send_payload(task: dict, destination: str, endpoint: str) -> requests.Respon
     else:
         raise ValueError(f"Destination {destination} is not valid")
     
-    payload = {
+    _payload = {
         "collection": destination,
         "database": destination,
         "dataSource": destination,
     }
-    payload.update(task)
-    response = requests.post(url, headers=headers, data=json.dumps(payload))
+    _payload.update(payload)
+    response = requests.post(url, headers=headers, data=json.dumps(_payload))
+
+    # Log
+    if not response.ok:
+        logger.warning(f"Failed to send payload to {destination}: {response.text}")
+
     return response
 
 
@@ -82,6 +76,38 @@ def add_log(
         }
     }
     response = send_payload(document, "CowrieLogs", "insertOne")
+    return response.ok
+
+
+def add_prompt(
+        system_role: str,
+        user: str,
+        context: str,
+        message: str,
+        output: str,
+        wait: bool = True,
+) -> bool:
+    """
+    Add a prompt to the database
+    """
+    document = {
+        "document":  { 
+            "role": system_role,
+            "user": user,
+            "contentType": context,
+            "prompt": message,
+            "outputContent": output,
+        }
+    }
+    kwargs = {
+        "payload": document,
+        "destination": "PromptLog",
+        "endpoint": "insertOne",
+    }
+    if not wait:
+        Thread(target=send_payload, kwargs=kwargs).start()
+        return True
+    response = send_payload(**kwargs)
     return response.ok
 
 
@@ -146,7 +172,7 @@ def get_all_items(destination: str, content_filter: dict = {}) -> pd.DataFrame:
         return r
 
     threads: list[ThreadWithReturnValue] = []
-    with trange(pages, desc="Retrieving all logs") as pbar:
+    with trange(pages, desc="Retrieving all logs", leave=False) as pbar:
         for page in range(pages):
             kwargs = {
                 "page": page,
