@@ -233,6 +233,6 @@ def split_chained_commands(commands: pd.DataFrame) -> pd.DataFrame:
     """
     chain_symbols = ["&&", "||", ";", "|"]
     regex = "(?:" + "|".join(map(lambda s: s.replace("|", "\|"), chain_symbols)) + ")"
-    expanded_commands = commands["input_cmd"].str.split(regex, regex=True)
-    return commands.assign(input_cmd=expanded_commands).explode("input_cmd", ignore_index=True)
+    expanded_commands = commands["command"].str.split(regex, regex=True)
+    return commands.assign(command=expanded_commands).explode("command", ignore_index=True)
 

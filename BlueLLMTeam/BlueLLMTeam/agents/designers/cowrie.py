@@ -4,25 +4,36 @@ import time
 import shutil
 import docker
 import logging
+from pathlib import Path
 from random import randint
 from tqdm import trange, tqdm
+from dotenv import load_dotenv
 import threading
 
 from BlueLLMTeam.agents.designers.base import HoneypotDesignerRole
-from BlueLLMTeam.agents.base import ROOT_DIR
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
-from BlueLLMTeam.Honeypot.createFiles import generate_file_system, generate_random_id, generate_file_contents
-from BlueLLMTeam.Honeypot.createfs import pickledir
+from BlueLLMTeam.agents.designers.fs.pickle_fs import pickledir
 from BlueLLMTeam.agents.designers.cmd import CowrieCommandDesigner
-from BlueLLMTeam.agents.designers.fs import copy_local_filenames
+from BlueLLMTeam.agents.designers.fs.fs import copy_local_filenames
 import BlueLLMTeam.PromptDict as prompt
 from BlueLLMTeam.utils.path import conf
+from BlueLLMTeam.utils.text import generate_random_id
 
-
-HONEYPOT_FS = ROOT_DIR / "Honeypot/tmpfs"
 
 logger = logging.getLogger(__name__)
 
+load_dotenv()
+
+# File creation
+if os.getenv("FS_V2") is not None:
+    from .fs.v2.createFiles import generate_file_system, generate_file_contents
+    print("Using version 2 of the file system creation")
+else:
+    from .fs.v1.createFiles import generate_file_system, generate_file_contents
+    print("Using version 1 of the file system creation")
+
+
+HONEYPOT_FS = Path(os.getenv("HONEYPOT_FS", "/tmp"))
 AVAILABLE_HONEYPOTS = {
     "cowrie": "An SSH honeypot"
 }
@@ -69,8 +80,6 @@ linux_system_files = [
     "etc/passwd",
     "etc/motd",
 ]
-
-
 
 
 class CowrieDesignerRole(HoneypotDesignerRole):

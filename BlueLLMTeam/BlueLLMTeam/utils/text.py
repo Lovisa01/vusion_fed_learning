@@ -1,4 +1,12 @@
 import json
+import string
+import random
+
+
+def generate_random_id(length=10):
+    """Generate a random id of a given length."""
+    letters = string.ascii_letters + string.digits
+    return ''.join(random.choice(letters) for _ in range(length))
 
 
 def extract_json_from_text(text: str):
