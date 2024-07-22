@@ -6,7 +6,7 @@ import docker
 import logging
 from pathlib import Path
 from random import randint
-from tqdm import trange, tqdm
+from BlueLLMTeam.utils.tqdm import trange_wrapper, tqdm
 from dotenv import load_dotenv
 import threading
 
@@ -281,7 +281,7 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         # Create a separate thread for each generation
         threads: list[threading.Thread] = []
 
-        with trange(len(linux_system_files), desc="Generating system files", leave=False) as pbar:
+        with trange_wrapper(len(linux_system_files), desc="Generating system files", leave=False) as pbar:
             for file in linux_system_files:
                 kwargs = {
                     "file": file,

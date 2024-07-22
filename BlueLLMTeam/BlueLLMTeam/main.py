@@ -1,7 +1,7 @@
 import json
 import logging
 
-from tqdm import tqdm
+from BlueLLMTeam.utils.tqdm import tqdm_wrapper
 from argparse import ArgumentParser
 from dataclasses import dataclass
 
@@ -146,6 +146,10 @@ def main():
     while True:
         print("\nThinking about what honeypots to deploy...")
         honeypot_count = team_lead.honeypot_amount(context)
+
+        if len(honeypot_count) == 0:
+            print("Failed to generate a valid honeypot count. Trying again...")
+            continue
         
         print("Team Lead wants to deploy the following honeypots: ")
         for honeypot_type, count in honeypot_count.items():
@@ -177,7 +181,7 @@ def main():
     print(LLM_DESIGNER)
     while True:
         print("Creating custom contents for all requested honeypots...")
-        for honeypot_description in tqdm(honeypot_descriptions):
+        for honeypot_description in tqdm_wrapper(honeypot_descriptions):
             designer = CowrieDesignerRole(
                 llm_endpoint,
                 honeypot_description["description"],
@@ -190,7 +194,7 @@ def main():
             break
     
     print("Deploying honeypots...")
-    for designer in tqdm(designers):
+    for designer in tqdm_wrapper(designers):
         designer.deploy_honeypot()
     
     # Monitor attacker

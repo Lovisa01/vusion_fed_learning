@@ -3,7 +3,7 @@ import json
 import logging
 import threading
 from pathlib import Path
-from tqdm import trange, tqdm
+from BlueLLMTeam.utils.tqdm import trange_wrapper, tqdm, tqdm_wrapper
 
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase
 from BlueLLMTeam import PromptDict as prompt
@@ -61,7 +61,7 @@ def generate_file_system(
     pm_response = create_file_structure(llm)
     system_file = create_file_structure_enhance(pm_response, llm)
     #Range determines how complex and deep the system will generate file contents
-    for _ in trange(8, desc="Increasing filesystem complexity", leave=False):
+    for _ in trange_wrapper(8, desc="Increasing filesystem complexity", leave=False):
         system_file = create_file_structure_enhance(system_file, llm)
     #Generate the json from the instructions given from the for loop.
     file_structure_response=create_file_structure_employee(system_file, llm)
@@ -148,7 +148,7 @@ def generate_file_contents(
             pbar.update(1)
 
     # Create a lot of threads
-    with tqdm(total=len(files), desc="Generating file contents", leave=False) as pbar:
+    with tqdm_wrapper(total=len(files), desc="Generating file contents", leave=False) as pbar:
         lock = threading.Lock()
         threads: list[threading.Thread] = []
         for file in files:

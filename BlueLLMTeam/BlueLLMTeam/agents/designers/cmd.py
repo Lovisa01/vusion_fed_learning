@@ -1,6 +1,6 @@
 import string
 import logging
-from tqdm import trange, tqdm
+from BlueLLMTeam.utils.tqdm import tqdm, trange_wrapper
 from abc import abstractmethod
 
 import BlueLLMTeam.PromptDict as prompt
@@ -70,7 +70,7 @@ class CommandDesigner(AgentRoleBase):
         # Create a separate thread for each generation
         threads: list[ThreadWithReturnValue] = []
 
-        with trange(len(top_k), desc="Generating command responses", leave=False) as pbar:
+        with trange_wrapper(len(top_k), desc="Generating command responses", leave=False) as pbar:
             for cmd in top_k:
                 kwargs = {
                     "cmd": cmd,

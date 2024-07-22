@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import threading
 import logging
-from tqdm import tqdm
+from BlueLLMTeam.utils.tqdm import tqdm_wrapper, tqdm
 
 from BlueLLMTeam import PromptDict as prompt
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase, ChatGPTEndpoint
@@ -64,7 +64,7 @@ def generate_file_contents(
             pbar.update(1)
 
     # Create a lot of threads
-    with tqdm(total=len(files), desc="Generating file contents", leave=False) as pbar:
+    with tqdm_wrapper(total=len(files), desc="Generating file contents", leave=False) as pbar:
         lock = threading.Lock()
         threads: list[threading.Thread] = []
         for file in files:
