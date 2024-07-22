@@ -1,5 +1,5 @@
 import logging
-from tqdm import tqdm
+from BlueLLMTeam.utils.tqdm import tqdm_wrapper
 from pathlib import Path
 
 
@@ -32,7 +32,7 @@ def copy_local_filenames(src_dir, dest_dir, max_depth: int = 3):
         raise ValueError(f"Source directory '{src_dir}' does not exist.")
     
     # Iterate over all files and directories in the source directory
-    for item in tqdm(list(safe_generator(src_path.rglob('*'))), desc="Copying more pickle files", leave=False):
+    for item in tqdm_wrapper(list(safe_generator(src_path.rglob('*'))), desc="Copying more pickle files", leave=False):
         try:
             # Create corresponding path in the destination directory
             relative_path = item.relative_to(src_path)

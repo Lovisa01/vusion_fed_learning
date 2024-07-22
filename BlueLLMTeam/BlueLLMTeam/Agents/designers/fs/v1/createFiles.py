@@ -1,24 +1,16 @@
 import os
-import random
-import string
 from pathlib import Path
 import threading
 import logging
-from tqdm import tqdm
+from BlueLLMTeam.utils.tqdm import tqdm_wrapper, tqdm
 
 from BlueLLMTeam import PromptDict as prompt
 from BlueLLMTeam.LLMEndpoint import LLMEndpointBase, ChatGPTEndpoint
-from BlueLLMTeam.Honeypot import AddContents
+from . import AddContents
 from BlueLLMTeam.utils.threading import ThreadWithReturnValue
 
 
 logger = logging.getLogger(__name__)
-
-
-def generate_random_id(length=10):
-    """Generate a random id of a given length."""
-    letters = string.ascii_letters + string.digits
-    return ''.join(random.choice(letters) for _ in range(length))
 
 
 def generate_file_content(file: str, local_fs: Path, llm: LLMEndpointBase, light_weight: bool = False):
@@ -72,7 +64,7 @@ def generate_file_contents(
             pbar.update(1)
 
     # Create a lot of threads
-    with tqdm(total=len(files), desc="Generating file contents", leave=False) as pbar:
+    with tqdm_wrapper(total=len(files), desc="Generating file contents", leave=False) as pbar:
         lock = threading.Lock()
         threads: list[threading.Thread] = []
         for file in files:

@@ -3,7 +3,7 @@ import requests
 import logging
 import json
 import pandas as pd
-from tqdm import trange, tqdm
+from BlueLLMTeam.utils.tqdm import trange_wrapper, tqdm
 
 from dotenv import load_dotenv
 
@@ -172,7 +172,7 @@ def get_all_items(destination: str, content_filter: dict = {}) -> pd.DataFrame:
         return r
 
     threads: list[ThreadWithReturnValue] = []
-    with trange(pages, desc="Retrieving all logs", leave=False) as pbar:
+    with trange_wrapper(pages, desc="Retrieving all logs", leave=False) as pbar:
         for page in range(pages):
             kwargs = {
                 "page": page,
@@ -233,6 +233,6 @@ def split_chained_commands(commands: pd.DataFrame) -> pd.DataFrame:
     """
     chain_symbols = ["&&", "||", ";", "|"]
     regex = "(?:" + "|".join(map(lambda s: s.replace("|", "\|"), chain_symbols)) + ")"
-    expanded_commands = commands["input_cmd"].str.split(regex, regex=True)
-    return commands.assign(input_cmd=expanded_commands).explode("input_cmd", ignore_index=True)
+    expanded_commands = commands["command"].str.split(regex, regex=True)
+    return commands.assign(command=expanded_commands).explode("command", ignore_index=True)
 
