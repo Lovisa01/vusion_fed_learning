@@ -216,6 +216,10 @@ class CowrieDesignerRole(HoneypotDesignerRole):
         """
         # Generate filesystem
         logger.info("Starting file generation for /home folder")
+        if os.getenv("FS_V2") is not None:
+            logger.info("Using version 2 of the file system creation")
+        else:
+            logger.info("Using version 1 of the file system creation")
         files = generate_file_system(
             current_folder="/home",
             honey_context=self.honeypot_description,
