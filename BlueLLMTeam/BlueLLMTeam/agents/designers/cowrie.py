@@ -332,4 +332,4 @@ class CowrieDesignerRole(HoneypotDesignerRole):
                 pass
 
         # Pickle
-        pickledir(self.pickle_fs, self.depth, self.honeypot_data / "custom.pickle")
+        pickledir(self.pickle_fs, 100, self.honeypot_data / "custom.pickle")
