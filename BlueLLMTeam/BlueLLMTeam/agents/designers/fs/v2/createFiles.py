@@ -148,6 +148,7 @@ def generate_file_contents(
             pbar.update(1)
 
     # Create a lot of threads
+    logger.info(f"Generating file contents for {len(files)} files")
     with tqdm_wrapper(total=len(files), desc="Generating file contents", leave=False) as pbar:
         lock = threading.Lock()
         threads: list[threading.Thread] = []
