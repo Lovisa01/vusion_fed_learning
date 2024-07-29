@@ -56,12 +56,6 @@ class Arguments:
     @property
     def verbose(self):
         return self.verbosity > 0
-    
-    def __str__(self):
-        s = f"Context file: {self.context_file}"
-        s += f"\nUpdate frequency: {self.frequency}"
-        s += f"\nVerbosity level: {self.verbosity}"
-        return s
 
 
 def quit():
