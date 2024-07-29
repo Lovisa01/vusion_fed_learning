@@ -24,6 +24,7 @@ class Arguments:
     light_weight: bool
     max_honeypots: int
     logfile: str
+    analyst_on: bool
 
     @classmethod
     def from_cli(cls):
@@ -38,6 +39,7 @@ class Arguments:
         parser.add_argument("--light-weight", "-l", action="store_true", help="Create a light weight file system without any file contents")
         parser.add_argument("--max-honeypots", "-m", type=int, default=-1, help="Do not deploy more honeypots than this")
         parser.add_argument("--logfile", "-L", type=str, default=None, help="Log file to write to")
+        parser.add_argument("--no-analyst", "-A", action="store_true", help="Turn of the analyst")
         
         args = parser.parse_args()
         return cls(
@@ -48,6 +50,7 @@ class Arguments:
             light_weight=args.light_weight,
             max_honeypots=args.max_honeypots,
             logfile=args.logfile,
+            analyst_on=not args.no_analyst
         )
     
     @property
@@ -198,7 +201,7 @@ def main():
         designer.deploy_honeypot()
     
     # Monitor attacker
-    monitor_logs(args.frequency, args.verbosity)
+    monitor_logs(args.frequency, args.verbosity, args.analyst_on)
 
     print("Stopping execution")
 

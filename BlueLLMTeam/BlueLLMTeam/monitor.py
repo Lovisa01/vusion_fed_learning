@@ -12,7 +12,7 @@ from BlueLLMTeam.database.db_interaction import get_updated_sessions
 logger = logging.getLogger(__name__)
 
 
-def analyze_session(df: pd.DataFrame, analyst: CowrieAnalystRole) -> None:
+def analyze_session(df: pd.DataFrame, analyst: CowrieAnalystRole, analyst_on: bool = True) -> None:
     """
     Analyze the logs from a session
     """
@@ -23,13 +23,16 @@ def analyze_session(df: pd.DataFrame, analyst: CowrieAnalystRole) -> None:
     print(logs_to_analyze)
     print("########################################")
     print("\nThinking...")
-    response = analyst.analyse_logs(logs_to_analyze)
+    if analyst_on:
+        response = analyst.analyse_logs(logs_to_analyze)
+    else:
+        response = "Analyst is turned off"
     print("##### Analyst result #####")
     print(response)
     print("##########################")
 
 
-def monitor_logs(frequency: float, verbosity: int = 0):
+def monitor_logs(frequency: float, verbosity: int = 0, analyst_on: bool = True):
     """
     Monitor all sessions logs and analyze them with an LLM
     Present the user with a description of the current threats and activities of the attacker
@@ -60,7 +63,7 @@ def monitor_logs(frequency: float, verbosity: int = 0):
             
             sessions = set(df["session_id"])
             for session_id in sessions:
-                analyze_session(df[df["session_id"] == session_id], analyst)
+                analyze_session(df[df["session_id"] == session_id], analyst, analyst_on=analyst_on)
         except KeyboardInterrupt:
             logger.info("User interrupted main thread. Terminating program...")
             break
